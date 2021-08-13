@@ -1,0 +1,87 @@
+/* .board-row:after {
+  clear: both;
+  content: "";
+  display: table;
+} */
+
+.square {
+  /* background: #fff; */
+  height:65px;
+  width: 65px;
+  margin-left:-3px;
+  margin-top:-3px;
+}
+
+.dark-square {
+  background-color: #7d945d;
+  color:#7d945d;
+ 
+}
+
+.light-sqaure {
+  background-color: #eeeed5;
+  color: #eeeed5;
+}
+
+.App {
+  display: flex;
+  justify-content: center;
+  margin: 30px;
+  
+}
+
+button {
+  border: none;
+}
+
+body {
+  background-color: rgb(29, 29, 29);
+}
+
+.bp {
+  background-image: url("pieces/Chess_pdt60.png");
+}
+
+.wp{
+  background-image: url("pieces/Chess_plt60.png");
+}
+
+.bn {
+  background-image: url("pieces/Chess_ndt60.png");
+}
+
+.wn{
+  background-image: url("pieces/Chess_nlt60.png");
+}
+
+.bb{
+  background-image: url("pieces/Chess_bdt60.png");
+}
+
+.wb {
+  background-image: url("pieces/Chess_blt60.png");
+}
+
+.br {
+  background-image: url("pieces/Chess_rdt60.png");
+}
+
+.wr {
+  background-image: url("pieces/Chess_rlt60.png");
+}
+
+.bk {
+  background-image: url("pieces/Chess_kdt60.png");
+}
+
+.wk {
+  background-image: url("pieces/Chess_klt60.png");
+}
+
+.bq {
+  background-image: url("pieces/Chess_qdt60.png");
+}
+
+.wq {
+  background-image: url("pieces/Chess_qlt60.png");
+}
