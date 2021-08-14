@@ -14,13 +14,18 @@
 
 .dark-square {
   background-color: #7d945d;
-  color:#7d945d;
- 
+}
+
+.dark-square-highlighted {
+  background-color: #BECA2F;
 }
 
 .light-sqaure {
   background-color: #eeeed5;
-  color: #eeeed5;
+}
+
+.light-sqaure-highlighted {
+  background-color: #F7F76B;
 }
 
 .App {
