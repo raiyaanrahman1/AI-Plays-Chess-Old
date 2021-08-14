@@ -2,7 +2,7 @@ import React from 'react';
 
 const Square = (props) => {
     return (
-        <button className={"square " + props.squareType + " " + props.backgroundImage} onClick={() => {props.onClickFunction(props.onClickParameters)}}></button>
+        <button className={"square " + props.squareTypes[props.squareLoc] + " " + props.backgroundImage} onClick={() => {props.onClickFunction(props.onClickParameters)}}></button>
     );
 };
 
