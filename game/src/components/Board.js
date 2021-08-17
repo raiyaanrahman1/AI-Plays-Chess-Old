@@ -4,16 +4,6 @@ import Square from './Sqaure';
 let pieceSelected = "";
 let selectedPieceLoc = "";
 
-let data = {
-    a1: "wr", b1: "wn", c1: "wb", d1: "wq", e1: "wk", f1: "wb", g1: "wn", h1: "wr",
-    a2: "wp", b2: "wp", c2: "wp", d2: "wp", e2: "wp", f2: "wp", g2: "wp", h2: "wp",
-    a3: "", b3: "", c3: "", d3: "", e3: "", f3: "", g3: "", h3: "",
-    a4: "", b4: "", c4: "", d4: "", e4: "", f4: "", g4: "", h4: "",
-    a5: "", b5: "", c5: "", d5: "", e5: "", f5: "", g5: "", h5: "",
-    a6: "", b6: "", c6: "", d6: "", e6: "", f6: "", g6: "", h6: "",
-    a7: "bp", b7: "bp", c7: "bp", d7: "bp", e7: "bp", f7: "bp", g7: "bp", h7: "bp",
-    a8: "br", b8: "bn", c8: "bb", d8: "bq", e8: "bk", f8: "bb", g8: "bn", h8: "br",
-};
 
 function nextChar(c) {
     return String.fromCharCode(c.charCodeAt(0) + 1);
@@ -65,10 +55,38 @@ const getPieceTypeByLetter = (letter) => {
             pieceType = "king";
             break;
         default:
-            console.log("error: invalid piece type");
+            console.log("error: invalid letter");
             break;
     }
     return pieceType;
+}
+
+const getLetterByPieceType = (pieceType) => {
+    let letter;
+    switch(pieceType){
+        case "pawns": 
+        letter = "p";
+            break;
+        case "knights":
+            letter = "n";
+            break;
+        case "bishops":
+            letter = "b";
+            break;
+        case "rooks":
+            letter = "r";
+            break;
+        case "queens":
+            letter = "q";
+            break;
+        case "king":
+            letter = "k";
+            break;
+        default:
+            console.log("error: invalid piece type");
+            break;
+    }
+    return letter;
 }
 
 const capturePiece = (theirPieces, pieceType, capturedPieceLoc) => {
@@ -83,7 +101,7 @@ const capturePiece = (theirPieces, pieceType, capturedPieceLoc) => {
     return theirNewPieces;
 }
 
-const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = true) => {
+const calculateLegalMoves = (myPieces, theirPieces, myColour, data, checkForCheck = true) => {
     
     let result = {...myPieces};
 
@@ -109,13 +127,20 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
                 newLocs[proposedLoc] = [];
             }
         }
+
         myNewPieces[pieceType] = newLocs;
-        let theirNewPieces = calculateLegalMoves(theirProposedPieces, myNewPieces, theirColour, false);
+        let proposedData = {...data};
+        proposedData[currLoc] = "";
+        proposedData[proposedLoc] = myColour.charAt(0) + getLetterByPieceType(pieceType);
+        let theirNewPieces = calculateLegalMoves(theirProposedPieces, myNewPieces, theirColour, proposedData, false);
         let myKingLoc = Object.keys(myNewPieces.king)[0];
+
+        
 
         for(let pieceType in theirNewPieces){
             for(let piece in theirNewPieces[pieceType]){
                 if(theirNewPieces[pieceType][piece].includes(myKingLoc)){
+
                     return true;
                 }
             }
@@ -222,7 +247,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[squareUpXsteps].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[squareUpXsteps] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[squareUpXsteps].charAt(1)), squareUpXsteps);
                 if(!myKingInCheck("rooks", rook, squareUpXsteps, theirNewPieces)){
                     legalMoves.push(squareUpXsteps);
@@ -245,7 +270,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[squareDownXsteps].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[squareDownXsteps] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[squareDownXsteps].charAt(1)), squareDownXsteps);
                 if(!myKingInCheck("rooks", rook, squareDownXsteps, theirNewPieces)){
                     legalMoves.push(squareDownXsteps);
@@ -267,7 +292,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("rooks", rook, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -294,7 +319,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("rooks", rook, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -306,7 +331,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
                 obstructions = true;
             }
             else{
-                rightChar = prevChar(rightChar);
+                rightChar = nextChar(rightChar);
             }
         }
 
@@ -332,7 +357,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("bishops", bishop, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -364,7 +389,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("bishops", bishop, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -395,7 +420,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("bishops", bishop, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -427,7 +452,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("bishops", bishop, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -463,7 +488,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -483,7 +508,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -503,7 +528,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -523,7 +548,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -542,7 +567,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -561,7 +586,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -580,7 +605,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -599,7 +624,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             if(data[square] == "" && !myKingInCheck("knights", knight, square, theirPieces)){
                 legalMoves.push(square);
             }
-            else if(data[square].charAt(0) != myColour.charAt(0)){
+            else if(data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("knights", knight, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -628,7 +653,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[squareUpXsteps].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[squareUpXsteps] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[squareUpXsteps].charAt(1)), squareUpXsteps);
                 if(!myKingInCheck("queens", queen, squareUpXsteps, theirNewPieces)){
                     legalMoves.push(squareUpXsteps);
@@ -651,7 +676,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[squareDownXsteps].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[squareDownXsteps] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[squareDownXsteps].charAt(1)), squareDownXsteps);
                 if(!myKingInCheck("queens", queen, squareDownXsteps, theirNewPieces)){
                     legalMoves.push(squareDownXsteps);
@@ -673,7 +698,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("queens", queen, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -700,7 +725,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if(data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("queens", queen, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -712,7 +737,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
                 obstructions = true;
             }
             else{
-                rightChar = prevChar(rightChar);
+                rightChar = nextChar(rightChar);
             }
         }
 
@@ -730,7 +755,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("queens", queen, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -762,7 +787,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("queens", queen, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -793,7 +818,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("queens", queen, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -825,7 +850,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
             else if (data[square].charAt(0) == myColour.charAt(0)){
                 obstructions = true;
             }
-            else {
+            else if(data[square] != ""){
                 let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
                 if(!myKingInCheck("queens", queen, square, theirNewPieces)){
                     legalMoves.push(square);
@@ -857,7 +882,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(parseInt(king.charAt(1)) < 8 && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(parseInt(king.charAt(1)) < 8 && data[square].charAt(0) != myColour.charAt(0)){
+    else if(parseInt(king.charAt(1)) < 8 && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -871,7 +896,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(parseInt(king.charAt(1)) > 1 && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(parseInt(king.charAt(1)) > 1 && data[square].charAt(0) != myColour.charAt(0)){
+    else if(parseInt(king.charAt(1)) > 1 && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -885,7 +910,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(king.charAt(0) != "a" && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(king.charAt(0) != "a" && data[square].charAt(0) != myColour.charAt(0)){
+    else if(king.charAt(0) != "a" && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -899,7 +924,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(king.charAt(0) != "h" && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(king.charAt(0) != "h" && data[square].charAt(0) != myColour.charAt(0)){
+    else if(king.charAt(0) != "h" && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -913,7 +938,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(parseInt(king.charAt(1)) < 8 && king.charAt(0) != "h" && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(parseInt(king.charAt(1)) < 8 && king.charAt(0) != "h" && data[square].charAt(0) != myColour.charAt(0)){
+    else if(parseInt(king.charAt(1)) < 8 && king.charAt(0) != "h" && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -927,7 +952,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(parseInt(king.charAt(1)) < 8 && king.charAt(0) != "a" && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(parseInt(king.charAt(1)) < 8 && king.charAt(0) != "a" && data[square].charAt(0) != myColour.charAt(0)){
+    else if(parseInt(king.charAt(1)) < 8 && king.charAt(0) != "a" && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -941,7 +966,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(parseInt(king.charAt(1)) > 1 && king.charAt(0) != "h" && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(parseInt(king.charAt(1)) > 1 && king.charAt(0) != "h" && data[square].charAt(0) != myColour.charAt(0)){
+    else if(parseInt(king.charAt(1)) > 1 && king.charAt(0) != "h" && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -955,7 +980,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
     if(parseInt(king.charAt(1)) > 1 && king.charAt(0) != "a" && data[square] == "" && !myKingInCheck("king", king, square, theirPieces)) {
         legalMoves.push(square)
     }
-    else if(parseInt(king.charAt(1)) > 1 && king.charAt(0) != "a" && data[square].charAt(0) != myColour.charAt(0)){
+    else if(parseInt(king.charAt(1)) > 1 && king.charAt(0) != "a" && data[square].charAt(0) != myColour.charAt(0) && data[square] != ""){
         let theirNewPieces = capturePiece(theirPieces, getPieceTypeByLetter(data[square].charAt(1)), square);
         if(!myKingInCheck("king", king, square, theirNewPieces)){
             legalMoves.push(square);
@@ -968,12 +993,34 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, checkForCheck = tr
 
 }
 
-const onClick = ([piece, player, pieceLoc, currentSquareTypes, setSquareTypes]) => {
+const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData]) => {
 
-    whitePieces = calculateLegalMoves(whitePieces, blackPieces, "white");
-    blackPieces = calculateLegalMoves(blackPieces, whitePieces, "black");
-    console.log(whitePieces);
-    console.log(blackPieces);
+    let myPieces, theirPieces;
+    let nextPlayer;
+    if(player == "white"){
+
+
+        whitePieces = calculateLegalMoves(whitePieces, blackPieces, "white", data);
+        myPieces = whitePieces;
+        theirPieces = blackPieces;
+        nextPlayer = "black";
+
+        
+    }
+    else {
+        blackPieces = calculateLegalMoves(blackPieces, whitePieces, "black", data);
+        myPieces = blackPieces;
+        theirPieces = whitePieces;
+        nextPlayer = "white";
+
+    }
+
+    //console.log(myPieces);
+    //console.log(data);
+    
+    
+    // console.log(whitePieces);
+    // console.log(blackPieces);
 
     let newSquareTypes = {...currentSquareTypes};
 
@@ -998,9 +1045,44 @@ const onClick = ([piece, player, pieceLoc, currentSquareTypes, setSquareTypes]) 
 
     // move a piece to empty square
     if(piece == "" && pieceSelected != "") {
-        deselectSelectedPiece();
 
         // move piece if possible
+        if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
+            //move piece
+            let newData = {...data};
+            newData[selectedPieceLoc] = "";
+            newData[pieceLoc] = pieceSelected;
+
+            delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+            myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
+
+            setData(newData);
+            setPlayer(nextPlayer);
+
+        }
+
+        deselectSelectedPiece();
+    }
+    else if(piece.charAt(0) == nextPlayer.charAt(0) && pieceSelected != ""){
+        // move piece if possible
+        if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
+            //move piece
+            let newData = {...data};
+            newData[selectedPieceLoc] = "";
+            newData[pieceLoc] = pieceSelected;
+
+            delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+            myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
+
+            delete theirPieces[getPieceTypeByLetter(piece.charAt(1))][pieceLoc];
+
+
+            setData(newData);
+            setPlayer(nextPlayer);
+
+        }
+
+        deselectSelectedPiece();
     }
 
     // select a piece when no other is selected
@@ -1019,15 +1101,13 @@ const onClick = ([piece, player, pieceLoc, currentSquareTypes, setSquareTypes]) 
         selectNewPiece();
     }
     
-
 }
 
-const Board = (props) => {
+const Board = () => {
 
     const board = [];
-
     
-    let player = "white";
+    let [player, setPlayer] = useState("white");
     
     let row, squareType, letter, pieceName, firstSquareLight = true;
     
@@ -1052,7 +1132,19 @@ const Board = (props) => {
         firstSquareLight = !firstSquareLight;
     }
 
+    let startingPos = {
+        a1: "wr", b1: "wn", c1: "wb", d1: "wq", e1: "wk", f1: "wb", g1: "wn", h1: "wr",
+        a2: "wp", b2: "wp", c2: "wp", d2: "wp", e2: "wp", f2: "wp", g2: "wp", h2: "wp",
+        a3: "", b3: "", c3: "", d3: "", e3: "", f3: "", g3: "", h3: "",
+        a4: "", b4: "", c4: "", d4: "", e4: "", f4: "", g4: "", h4: "",
+        a5: "", b5: "", c5: "", d5: "", e5: "", f5: "", g5: "", h5: "",
+        a6: "", b6: "", c6: "", d6: "", e6: "", f6: "", g6: "", h6: "",
+        a7: "bp", b7: "bp", c7: "bp", d7: "bp", e7: "bp", f7: "bp", g7: "bp", h7: "bp",
+        a8: "br", b8: "bn", c8: "bb", d8: "bq", e8: "bk", f8: "bb", g8: "bn", h8: "br",
+    };
+
     let [currentSquareTypes, setSquareTypes] = useState(newSquareTypes);
+    let [data, setData] = useState(startingPos);
     
     for(let i = 0; i < 8; i++){
         row = [];
@@ -1063,7 +1155,7 @@ const Board = (props) => {
 
             pieceName = data[letter+(8-i)];
 
-            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, letter+(8-i), currentSquareTypes, setSquareTypes]} key = {letter+(8-i)}/>);
+            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData]} key = {letter+(8-i)}/>);
             letter = nextChar(letter);
         }
         
