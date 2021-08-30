@@ -3,6 +3,9 @@ import Square from './Sqaure';
 
 let pieceSelected = "";
 let selectedPieceLoc = "";
+let isCapture = false;
+let targetLoc = "";
+let targetPiece = "";
 
 
 function nextChar(c) {
@@ -993,7 +996,9 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, data, checkForChec
 
 }
 
-const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData]) => {
+const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour]) => {
+
+    if(promotion == "enabled") return;
 
     let myPieces, theirPieces;
     let nextPlayer;
@@ -1041,13 +1046,34 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
         setSquareTypes(newSquareTypes);
     }
 
-    
+    const checkForPromotion = () => {
+        
+        if(pieceSelected.charAt(1) == "p"){
+            if(player == "white" && pieceLoc.charAt(1) == "8"){
+                return true;
+            }
+            else if(player == "black" && pieceLoc.charAt(1) == "1"){
+                return true;
+            }
+        }
+        return false;
+    }
 
     // move a piece to empty square
     if(piece == "" && pieceSelected != "") {
 
         // move piece if possible
         if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
+
+            if(checkForPromotion()){
+                isCapture = false;
+                targetLoc = pieceLoc;
+                targetPiece = "";
+                setPromotionColour(player.charAt(0));
+                setPromotion("enabled");
+                return;
+            }
+
             //move piece
             let newData = {...data};
             newData[selectedPieceLoc] = "";
@@ -1063,9 +1089,21 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
 
         deselectSelectedPiece();
     }
+    // capture piece
     else if(piece.charAt(0) == nextPlayer.charAt(0) && pieceSelected != ""){
         // move piece if possible
         if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
+
+            if(checkForPromotion()){
+                isCapture = true;
+                targetLoc = pieceLoc;
+                targetPiece = piece;
+                setPromotionColour(player.charAt(0));
+                setPromotion("enabled");
+                return;
+            }
+
+
             //move piece
             let newData = {...data};
             newData[selectedPieceLoc] = "";
@@ -1103,7 +1141,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
     
 }
 
-const Board = () => {
+const Board = (props) => {
 
     const board = [];
     
@@ -1145,6 +1183,61 @@ const Board = () => {
 
     let [currentSquareTypes, setSquareTypes] = useState(newSquareTypes);
     let [data, setData] = useState(startingPos);
+
+    useEffect(() => {
+        if(props.promotionPiece != ""){
+            let myPieces, theirPieces, nextPlayer;
+            if(player == "white"){
+                myPieces = whitePieces;
+                theirPieces = blackPieces;
+                nextPlayer = "black";
+            }
+            else {
+                myPieces = blackPieces;
+                theirPieces = whitePieces;
+                nextPlayer = "white";
+            }
+
+            if(!isCapture){
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData[targetLoc] = player.charAt(0) + props.promotionPiece;
+
+                delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+                myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];
+
+                setData(newData);
+                setPlayer(nextPlayer);
+            }
+            else {
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData[targetLoc] = player.charAt(0) + props.promotionPiece;
+
+                delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+                myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];
+
+                delete theirPieces[getPieceTypeByLetter(targetPiece.charAt(1))][targetLoc];
+
+
+                setData(newData);
+                setPlayer(nextPlayer);
+            }
+
+            props.setPromotion("disabled");
+            props.setPromotionPiece("");
+
+            let newSquareTypes = {...currentSquareTypes};
+
+            newSquareTypes[selectedPieceLoc] = newSquareTypes[selectedPieceLoc].substring(0, newSquareTypes[selectedPieceLoc].indexOf("-highlighted"));
+            setSquareTypes(newSquareTypes);
+
+            pieceSelected = "";
+            selectedPieceLoc = "";
+        }
+    }, [props.promotionPiece])
     
     for(let i = 0; i < 8; i++){
         row = [];
@@ -1155,7 +1248,7 @@ const Board = () => {
 
             pieceName = data[letter+(8-i)];
 
-            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData]} key = {letter+(8-i)}/>);
+            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour]} key = {letter+(8-i)}/>);
             letter = nextChar(letter);
         }
         

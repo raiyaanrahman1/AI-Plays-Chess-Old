@@ -1,13 +1,19 @@
-import React from 'react';
+import React, {useState} from 'react';
 import './App.css';
 import Board from './components/Board.js';
+import Promotion from './components/Promotion.js';
 
 function App() {
+
+  let [promotion, setPromotion] = useState("disabled");
+  let [promotionColour, setPromotionColour] = useState("w");
+  let [promotionPiece, setPromotionPiece] = useState("");
 
 
   return (
     <div className="App">
-      <Board/>
+      <Board promotion={promotion} setPromotion={setPromotion} promotionPiece = {promotionPiece} setPromotionPiece = {setPromotionPiece} promotionColour = {promotionColour} setPromotionColour = {setPromotionColour}/>
+      <Promotion promotion={promotion} setPromotion = {setPromotion} promotionPiece = {promotionPiece} setPromotionPiece = {setPromotionPiece} promotionColour = {promotionColour} setPromotionColour = {setPromotionColour}/>
     </div>
   );
 }

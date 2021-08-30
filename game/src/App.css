@@ -6,10 +6,17 @@
 
 .square {
   /* background: #fff; */
-  height:65px;
-  width: 65px;
-  margin-left:-3px;
-  margin-top:-3px;
+  height:63px;
+  width: 63px;
+  /* margin-left:-3px;
+  margin-top:-3px; */
+}
+
+.board-row {
+  margin: 0px;
+  padding: 0px;
+  height: 63px;
+  width: 504px;
 }
 
 .dark-square {
@@ -37,6 +44,8 @@
 
 button {
   border: none;
+  margin: 0px;
+  padding: 0px;
 }
 
 body {
@@ -89,4 +98,17 @@ body {
 
 .wq {
   background-image: url("pieces/Chess_qlt60.png");
+}
+
+.promotion {
+  display:block;
+  margin: 0px;
+  margin-top: 5px;
+  margin-left: 25px;
+  
+
+}
+
+.disabled {
+  display: none;
 }
