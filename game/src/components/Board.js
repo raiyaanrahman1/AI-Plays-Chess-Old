@@ -6,7 +6,9 @@ let selectedPieceLoc = "";
 let isCapture = false;
 let targetLoc = "";
 let targetPiece = "";
-
+// short, long castling rights
+let whiteCastlingRights = [true, true];
+let blackCastlingRights = [true, true];
 
 function nextChar(c) {
     return String.fromCharCode(c.charCodeAt(0) + 1);
@@ -106,7 +108,7 @@ const capturePiece = (theirPieces, pieceType, capturedPieceLoc) => {
 
 const calculateLegalMoves = (myPieces, theirPieces, myColour, data, checkForCheck = true) => {
     
-    let result = {...myPieces};
+    let result = JSON.parse(JSON.stringify(myPieces));
 
     let theirColour;
 
@@ -150,9 +152,31 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, data, checkForChec
         }
         return false;
 
-    }
+    }    
 
-    
+    // clean result
+
+    // for(let pawn in result.pawns){
+    //     result.pawns[pawn] = [];
+    // }
+
+    // for(let knight in result.knights){
+    //     result.knights[knight] = [];
+    // }
+
+    // for(let bishop in result.bishops){
+    //     result.bishops[bishop] = [];
+    // }
+
+    // for(let rook in result.rooks){
+    //     result.rooks[rook] = [];
+    // }
+    // for(let queen in result.queens){
+    //     result.queens[queen] = [];
+    // }
+    // for(let myKing in result.king){
+    //     result.king[myKing] = [];
+    // }
 
 
     let legalMoves;
@@ -874,6 +898,7 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, data, checkForChec
     }
 
     /* #############################################     KING    ################################################################ */
+    if(Object.keys(myPieces.king).length == 0) return result;
 
     let king = Object.keys(myPieces.king)[0];
 
@@ -990,22 +1015,55 @@ const calculateLegalMoves = (myPieces, theirPieces, myColour, data, checkForChec
         }
     }
 
+    if(!myKingInCheck("king", king, king, theirPieces)){
+        // White Castle short
+        if(myColour == "white" && whiteCastlingRights[0]){
+            if(data["f1"] == "" && data["g1"] == "" && !myKingInCheck("king", king, "f1", theirPieces) && !myKingInCheck("king", king, "g1", theirPieces)){
+                legalMoves.push("O-O");
+            }
+        }
+
+        // White Castle long
+        if(myColour == "white" && whiteCastlingRights[1]){
+            if(data["d1"] == "" && data["c1"] == "" && data["b1"] == "" && !myKingInCheck("king", king, "d1", theirPieces) && !myKingInCheck("king", king, "c1", theirPieces)){
+                legalMoves.push("O-O-O");
+            }
+        }
+
+        // Black Castle short
+        if(myColour == "black" && blackCastlingRights[0]){
+            if(data["f8"] == "" && data["g8"] == "" && !myKingInCheck("king", king, "f8", theirPieces) && !myKingInCheck("king", king, "g8", theirPieces)){
+                legalMoves.push("O-O");
+            }
+        }
+
+        // Black Castle long
+        if(myColour == "black" && blackCastlingRights[1]){
+            if(data["d8"] == "" && data["c8"] == "" && data["b8"] == "" && !myKingInCheck("king", king, "d8", theirPieces) && !myKingInCheck("king", king, "c8", theirPieces)){
+                legalMoves.push("O-O-O");
+            }
+        }
+    }
+
     result.king[king] = [...legalMoves];
 
     return result;
 
 }
 
-const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour]) => {
+const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory]) => {
 
     if(promotion == "enabled") return;
 
     let myPieces, theirPieces;
     let nextPlayer;
+
+    // change so that not calculating moves on each mouse click - must always update both at same time bc of castling and giving check at the same time
+    whitePieces = calculateLegalMoves(whitePieces, blackPieces, "white", data);
+    blackPieces = calculateLegalMoves(blackPieces, whitePieces, "black", data);
+
     if(player == "white"){
-
-
-        whitePieces = calculateLegalMoves(whitePieces, blackPieces, "white", data);
+        
         myPieces = whitePieces;
         theirPieces = blackPieces;
         nextPlayer = "black";
@@ -1013,19 +1071,12 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
         
     }
     else {
-        blackPieces = calculateLegalMoves(blackPieces, whitePieces, "black", data);
+
         myPieces = blackPieces;
         theirPieces = whitePieces;
         nextPlayer = "white";
 
     }
-
-    //console.log(myPieces);
-    //console.log(data);
-    
-    
-    // console.log(whitePieces);
-    // console.log(blackPieces);
 
     let newSquareTypes = {...currentSquareTypes};
 
@@ -1059,6 +1110,260 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
         return false;
     }
 
+    const generateMoveName = () => {
+        let theirColour;
+        if(player == "white") theirColour = "black";
+        else theirColour = "white";
+
+        switch(pieceSelected.charAt(1)){
+            case "p":
+
+                if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                    return `${selectedPieceLoc.charAt(0)}x${pieceLoc}`;
+                }
+                
+                return pieceLoc;
+                
+            case "n":
+                for(let knight in myPieces.knights){
+                    if(knight != selectedPieceLoc && myPieces.knights[knight].includes(pieceLoc)){
+                        if(knight.charAt(0) == selectedPieceLoc.charAt(0)){
+                            if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                                return `N${selectedPieceLoc.charAt(1)}x${pieceLoc}`;
+                            }
+                            return `N${selectedPieceLoc.charAt(1)}${pieceLoc}`;
+                        }
+                        if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                            return `N${selectedPieceLoc.charAt(0)}x${pieceLoc}`;
+                        }
+                        return `N${selectedPieceLoc.charAt(0)}${pieceLoc}`;
+                    }
+                }
+
+                if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                    return `Nx${pieceLoc}`;
+                }
+                
+                return `N${pieceLoc}`;
+                
+            case "b":
+                for(let bishop in myPieces.bishops){
+                    if(bishop != selectedPieceLoc && myPieces.bishops[bishop].includes(pieceLoc)){
+                        if(bishop.charAt(0) == selectedPieceLoc.charAt(0)){
+                            if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                                return `B${selectedPieceLoc.charAt(1)}x${pieceLoc}`;
+                            }
+                            return `B${selectedPieceLoc.charAt(1)}${pieceLoc}`;
+                        }
+                        if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                            return `B${selectedPieceLoc.charAt(0)}x${pieceLoc}`;
+                        }
+                        return `B${selectedPieceLoc.charAt(0)}${pieceLoc}`;
+                    }
+                }
+
+                if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                    return `Bx${pieceLoc}`;
+                }
+                
+                return `B${pieceLoc}`;
+                
+            case "r":
+                if(player == "white" && whiteCastlingRights[0] && selectedPieceLoc == "h1"){
+                    whiteCastlingRights[0] = false;
+                }
+                else if(player == "white" && whiteCastlingRights[1] && selectedPieceLoc == "a1"){
+                    whiteCastlingRights[1] = false;
+                }
+                else if(player == "black" && blackCastlingRights[0] && selectedPieceLoc == "h8"){
+                    blackCastlingRights[0] = false;
+                }
+                else if(player == "black" && blackCastlingRights[1] && selectedPieceLoc == "a8"){
+                    blackCastlingRights[1] = false;
+                }
+
+                for(let rook in myPieces.rooks){
+                    if(rook != selectedPieceLoc && myPieces.rooks[rook].includes(pieceLoc)){
+                        if(rook.charAt(0) == selectedPieceLoc.charAt(0)){
+                            if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                                return `R${selectedPieceLoc.charAt(1)}x${pieceLoc}`;
+                            }
+                            return `R${selectedPieceLoc.charAt(1)}${pieceLoc}`;
+                        }
+                        if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                            return `R${selectedPieceLoc.charAt(0)}x${pieceLoc}`;
+                        }
+                        return `R${selectedPieceLoc.charAt(0)}${pieceLoc}`;
+                    }
+                }
+
+                if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                    return `Rx${pieceLoc}`;
+                }
+                
+                return `R${pieceLoc}`;
+                
+            case "q":
+                for(let queen in myPieces.queens){
+                    if(queen != selectedPieceLoc && myPieces.queens[queen].includes(pieceLoc)){
+                        if(queen.charAt(0) == selectedPieceLoc.charAt(0)){
+                            if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                                return `Q${selectedPieceLoc.charAt(1)}x${pieceLoc}`;
+                            }
+                            return `Q${selectedPieceLoc.charAt(1)}${pieceLoc}`;
+                        }
+                        if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                            return `Q${selectedPieceLoc.charAt(0)}x${pieceLoc}`;
+                        }
+                        return `Q${selectedPieceLoc.charAt(0)}${pieceLoc}`;
+                    }
+                }
+
+                if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                    return `Qx${pieceLoc}`;
+                }
+                
+                return `Q${pieceLoc}`;
+                
+            case "k":
+                // turn off castling rights
+
+                if(player == "white" && (whiteCastlingRights[0] || whiteCastlingRights[1])){
+                    whiteCastlingRights = [false, false];
+                }
+                else if(player == "black" && (blackCastlingRights[0] || blackCastlingRights[1])){
+                    blackCastlingRights = [false, false];
+                }
+
+                // if castles
+                if(selectedPieceLoc.charAt(0) == "e" && pieceLoc.charAt(0) == "g"){
+                    return "O-O";
+                }
+                else if(selectedPieceLoc.charAt(0) == "e" && pieceLoc.charAt(0) == "c"){
+                    return "O-O-O";
+                }
+
+                // capture
+
+                if(data[pieceLoc].charAt(0) == theirColour.charAt(0)){
+                    return `Kx${pieceLoc}`;
+                }
+
+                // move to empty square
+                
+                return `K${pieceLoc}`;
+
+                
+        }
+    }
+
+    const updateMoveHistory = () => {
+        let newMoveHistory = [...moveHistory];
+        newMoveHistory.push(generateMoveName());
+        setMoveHistory(newMoveHistory);
+        console.log(newMoveHistory);
+    }
+
+    // castle
+    if(pieceSelected.charAt(1) == "k"){
+        let kingLoc = Object.keys(myPieces.king)[0];
+        if(player == "white"){
+            if(myPieces.king[kingLoc].includes("O-O") && (pieceLoc == "g1" || pieceLoc == "h1")){
+            
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData["h1"] = "";
+                newData["g1"] = pieceSelected;
+                newData["f1"] = "wr";
+
+                delete myPieces.king[selectedPieceLoc];
+                myPieces.king["g1"] = [];
+
+                delete myPieces.rooks["h1"];
+                myPieces.rooks["f1"] = [];
+
+                setData(newData);
+                setPlayer(nextPlayer);
+                updateMoveHistory();
+                deselectSelectedPiece();
+
+                whiteCastlingRights = [false, false];
+                return;
+            }
+            else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c1" || pieceLoc == "a1")){
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData["a1"] = "";
+                newData["c1"] = pieceSelected;
+                newData["d1"] = "wr";
+
+                delete myPieces.king[selectedPieceLoc];
+                myPieces.king["c1"] = [];
+
+                delete myPieces.rooks["a1"];
+                myPieces.rooks["d1"] = [];
+
+                setData(newData);
+                setPlayer(nextPlayer);
+                updateMoveHistory();
+                deselectSelectedPiece();
+
+                whiteCastlingRights = [false, false];
+                return;
+            }
+        }
+        else{
+            if(myPieces.king[kingLoc].includes("O-O") && (pieceLoc == "g8" || pieceLoc == "h8")){
+            
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData["h8"] = "";
+                newData["g8"] = pieceSelected;
+                newData["f8"] = "br";
+
+                delete myPieces.king[selectedPieceLoc];
+                myPieces.king["g8"] = [];
+
+                delete myPieces.rooks["h8"];
+                myPieces.rooks["f8"] = [];
+
+                setData(newData);
+                setPlayer(nextPlayer);
+                updateMoveHistory();
+                deselectSelectedPiece();
+
+                blackCastlingRights = [false, false];
+                return;
+            }
+            else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c8" || pieceLoc == "a8")){
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData["a8"] = "";
+                newData["c8"] = pieceSelected;
+                newData["d8"] = "br";
+
+                delete myPieces.king[selectedPieceLoc];
+                myPieces.king["c8"] = [];
+
+                delete myPieces.rooks["a8"];
+                myPieces.rooks["d8"] = [];
+
+                setData(newData);
+                setPlayer(nextPlayer);
+                updateMoveHistory();
+                deselectSelectedPiece();
+
+                blackCastlingRights = [false, false];
+                return;
+            }
+        }
+        
+    }
+
     // move a piece to empty square
     if(piece == "" && pieceSelected != "") {
 
@@ -1084,6 +1389,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
 
             setData(newData);
             setPlayer(nextPlayer);
+            updateMoveHistory();
 
         }
 
@@ -1117,6 +1423,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
 
             setData(newData);
             setPlayer(nextPlayer);
+            updateMoveHistory();
 
         }
 
@@ -1237,7 +1544,7 @@ const Board = (props) => {
             pieceSelected = "";
             selectedPieceLoc = "";
         }
-    }, [props.promotionPiece])
+    }, [props.promotionPiece]);
     
     for(let i = 0; i < 8; i++){
         row = [];
@@ -1248,7 +1555,7 @@ const Board = (props) => {
 
             pieceName = data[letter+(8-i)];
 
-            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour]} key = {letter+(8-i)}/>);
+            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory]} key = {letter+(8-i)}/>);
             letter = nextChar(letter);
         }
         

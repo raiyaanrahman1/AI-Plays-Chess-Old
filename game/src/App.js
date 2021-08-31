@@ -9,10 +9,11 @@ function App() {
   let [promotionColour, setPromotionColour] = useState("w");
   let [promotionPiece, setPromotionPiece] = useState("");
 
+  let [moveHistory, setMoveHistory] = useState([]);
 
   return (
     <div className="App">
-      <Board promotion={promotion} setPromotion={setPromotion} promotionPiece = {promotionPiece} setPromotionPiece = {setPromotionPiece} promotionColour = {promotionColour} setPromotionColour = {setPromotionColour}/>
+      <Board promotion={promotion} setPromotion={setPromotion} promotionPiece = {promotionPiece} setPromotionPiece = {setPromotionPiece} promotionColour = {promotionColour} setPromotionColour = {setPromotionColour} moveHistory = {moveHistory} setMoveHistory = {setMoveHistory}/>
       <Promotion promotion={promotion} setPromotion = {setPromotion} promotionPiece = {promotionPiece} setPromotionPiece = {setPromotionPiece} promotionColour = {promotionColour} setPromotionColour = {setPromotionColour}/>
     </div>
   );
