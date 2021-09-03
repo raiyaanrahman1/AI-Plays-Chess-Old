@@ -43,7 +43,7 @@
   display: flex;
   justify-content: center;
   margin: 30px;
-  
+  margin-left: -40px;
 }
 
 button {
@@ -126,4 +126,29 @@ body {
   width: 140px;
   height: 500px;
   margin-right: 20px;
+}
+
+.material {
+  width: 100px;
+  height: 500px;
+  margin-left: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content:space-between;
+}
+
+.icon-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.icon {
+  display: inline-block;
+  width: 25px;
+  height: 25px;
+  background-size: 25px 25px;
+}
+
+.material-text {
+  text-align: right;
 }

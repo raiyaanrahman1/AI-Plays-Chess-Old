@@ -1295,7 +1295,7 @@ const generateMoveName = (data, destination, myPieces, player) => {
     }
 }
 
-const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory]) => {
+const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial]) => {
 
     if(promotion == "enabled") return;
 
@@ -1476,6 +1476,17 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 newData[pieceLoc] = pieceSelected;
                 let theirPawnLoc = pieceLoc.charAt(0) + (parseInt(pieceLoc.charAt(1))-squaresUp);
                 newData[theirPawnLoc] = "";
+
+                if(player == "white"){
+                    let newMaterial = {...material};
+                    newMaterial.white.push("p");
+                    setMaterial(newMaterial);
+                }
+                else {
+                    let newMaterial = {...material};
+                    newMaterial.black.push("p");
+                    setMaterial(newMaterial);
+                }
                 
 
                 delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
@@ -1510,6 +1521,17 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 newData[pieceLoc] = pieceSelected;
                 let theirPawnLoc = pieceLoc.charAt(0) + (parseInt(pieceLoc.charAt(1))-squaresUp);
                 newData[theirPawnLoc] = "";
+
+                if(player == "white"){
+                    let newMaterial = {...material};
+                    newMaterial.white.push("p");
+                    setMaterial(newMaterial);
+                }
+                else {
+                    let newMaterial = {...material};
+                    newMaterial.black.push("p");
+                    setMaterial(newMaterial);
+                }
                 
 
                 delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
@@ -1587,6 +1609,17 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
             let newData = {...data};
             newData[selectedPieceLoc] = "";
             newData[pieceLoc] = pieceSelected;
+
+            if(player == "white"){
+                let newMaterial = {...material};
+                newMaterial.white.push(data[pieceLoc].charAt(1));
+                setMaterial(newMaterial);
+            }
+            else {
+                let newMaterial = {...material};
+                newMaterial.black.push(data[pieceLoc].charAt(1));
+                setMaterial(newMaterial);
+            }
 
             delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
             myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
@@ -1688,6 +1721,17 @@ const Board = (props) => {
                 newData[selectedPieceLoc] = "";
                 newData[targetLoc] = player.charAt(0) + props.promotionPiece;
 
+                if(player == "white"){
+                    let newMaterial = {...props.material};
+                    newMaterial.white.push(props.promotionPiece);
+                    props.setMaterial(newMaterial);
+                }
+                else {
+                    let newMaterial = {...props.material};
+                    newMaterial.white.push(props.promotionPiece);
+                    props.setMaterial(newMaterial);
+                }
+
                 delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
                 myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];           
             }
@@ -1695,6 +1739,19 @@ const Board = (props) => {
                 //move piece
                 newData[selectedPieceLoc] = "";
                 newData[targetLoc] = player.charAt(0) + props.promotionPiece;
+
+                if(player == "white"){
+                    let newMaterial = {...props.material};
+                    newMaterial.white.push(data[targetLoc].charAt(1));
+                    newMaterial.white.push(props.promotionPiece);
+                    props.setMaterial(newMaterial);
+                }
+                else {
+                    let newMaterial = {...props.material};
+                    newMaterial.black.push(data[targetLoc].charAt(1));
+                    newMaterial.white.push(props.promotionPiece);
+                    props.setMaterial(newMaterial);
+                }
 
                 delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
                 myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];
@@ -1736,11 +1793,6 @@ const Board = (props) => {
         }
     }, [props.promotionPiece]);
 
-    useEffect(() => {
-        if(props.moveHistory.length > 0){
-            console.log(props.moveHistory[props.moveHistory.length-1]);
-        }
-    }, [props.moveHistory]);
     
     for(let i = 0; i < 8; i++){
         row = [];
@@ -1751,7 +1803,7 @@ const Board = (props) => {
 
             pieceName = data[letter+(8-i)];
 
-            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory]} key = {letter+(8-i)}/>);
+            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial]} key = {letter+(8-i)}/>);
             letter = nextChar(letter);
         }
         
