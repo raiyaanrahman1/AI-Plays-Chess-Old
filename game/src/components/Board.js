@@ -1,5 +1,7 @@
 import React, {useState, useEffect} from 'react';
 import Square from './Sqaure';
+import moveSound from 'C:/Users/crazy/Documents/AI-Plays-Chess/game/src/sound/public_sound_standard_Move.mp3';
+import captureSound from 'C:/Users/crazy/Documents/AI-Plays-Chess/game/src/sound/public_sound_standard_Capture.mp3';
 
 let pieceSelected = "";
 let selectedPieceLoc = "";
@@ -18,6 +20,21 @@ function prevChar(c) {
     return String.fromCharCode(c.charCodeAt(0) - 1);
 }
 
+function sound(src) {
+    this.sound = document.createElement("audio");
+    this.sound.src = src;
+    this.sound.setAttribute("preload", "auto");
+    this.sound.setAttribute("controls", "none");
+    this.sound.style.display = "none";
+    document.body.appendChild(this.sound);
+    this.play = function(){
+      this.sound.play();
+    }
+    this.stop = function(){
+      this.sound.pause();
+    }
+}
+  
 // structure of pieces objects
     // {piece: {"location": [legal moves], ...}}
 let whitePieces = {
@@ -1295,7 +1312,7 @@ const generateMoveName = (data, destination, myPieces, player) => {
     }
 }
 
-const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial]) => {
+const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial, move, capture]) => {
 
     if(promotion == "enabled") return;
 
@@ -1376,6 +1393,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
+                move.play();
+
                 whiteCastlingRights = [false, false];
                 return;
             }
@@ -1400,6 +1419,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
+
+                move.play();
 
                 whiteCastlingRights = [false, false];
                 return;
@@ -1429,6 +1450,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
+                move.play();
+
                 blackCastlingRights = [false, false];
                 return;
             }
@@ -1453,6 +1476,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
+
+                move.play();
 
                 blackCastlingRights = [false, false];
                 return;
@@ -1504,6 +1529,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
+                capture.play();
+
                 return;
             }
             
@@ -1550,6 +1577,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
+                capture.play();
+
                 return;
             }
             
@@ -1585,6 +1614,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
             updatePieces();
             updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
             setPlayer(nextPlayer);
+            move.play();
 
         }
 
@@ -1633,6 +1663,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
             updatePieces();
             updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
             setPlayer(nextPlayer);
+            capture.play();
 
         }
 
@@ -1662,6 +1693,8 @@ const Board = (props) => {
     const board = [];
     
     let [player, setPlayer] = useState("white");
+    let [move] = useState(new sound(moveSound));
+    let [capture] = useState(new sound(captureSound));
     
     let row, squareType, letter, pieceName, firstSquareLight = true;
     
@@ -1733,7 +1766,8 @@ const Board = (props) => {
                 }
 
                 delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
-                myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];           
+                myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];  
+                move.play();         
             }
             else {
                 //move piece
@@ -1757,6 +1791,7 @@ const Board = (props) => {
                 myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];
 
                 delete theirPieces[getPieceTypeByLetter(targetPiece.charAt(1))][targetLoc];
+                capture.play();
             }
 
             props.setPromotion("disabled");
@@ -1803,7 +1838,7 @@ const Board = (props) => {
 
             pieceName = data[letter+(8-i)];
 
-            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial]} key = {letter+(8-i)}/>);
+            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial, move, capture]} key = {letter+(8-i)}/>);
             letter = nextChar(letter);
         }
         
