@@ -13,8 +13,6 @@ const Material = (props) => {
         for(let piece of props.material.black){
             material.black[piece]++;
         }
-        console.log("white:" + JSON.stringify(material.white));
-        console.log("black:" + JSON.stringify(material.black));
 
         let whiteTotalMaterial = material.white["p"] + material.white["n"]*3 + material.white["b"]*3 + material.white["r"]*5 + material.white["q"]*9;
         let blackTotalMaterial = material.black["p"] + material.black["n"]*3 + material.black["b"]*3 + material.black["r"]*5 + material.black["q"]*9;

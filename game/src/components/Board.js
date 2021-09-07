@@ -1163,7 +1163,6 @@ const updateMoveHistory = (moveHistory, setMoveHistory, suffix) => {
 
 const generateMoveName = (data, destination, myPieces, player) => {
     let theirColour;
-    let suffix = "";
     
     if(player == "white"){
         theirColour = "black";
@@ -1291,10 +1290,10 @@ const generateMoveName = (data, destination, myPieces, player) => {
             }
 
             // if castles
-            if(selectedPieceLoc.charAt(0) == "e" && destination.charAt(0) == "g"){
+            if(selectedPieceLoc.charAt(0) == "e" && (destination.charAt(0) == "g" || destination.charAt(0) == "h")){
                 return "O-O";
             }
-            else if(selectedPieceLoc.charAt(0) == "e" && destination.charAt(0) == "c"){
+            else if(selectedPieceLoc.charAt(0) == "e" && (destination.charAt(0) == "c" || destination.charAt(0) == "a")){
                 return "O-O-O";
             }
 
