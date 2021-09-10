@@ -11,6 +11,7 @@ let targetPiece = "";
 // short, long castling rights
 let whiteCastlingRights = [true, true];
 let blackCastlingRights = [true, true];
+let HUMAN_PLAYER = "white", AI_PLAYER = "black", MAX_DEPTH = 2;
 
 function nextChar(c) {
     return String.fromCharCode(c.charCodeAt(0) + 1);
@@ -1121,15 +1122,15 @@ const updateLegalMoves = (data, moveHistory) => {
     blackPieces = calculateLegalMoves(blackPieces, whitePieces, "black", data, moveHistory);
 }
 
-const getNewMoveHistory = (data, destination, myPieces, player, moveHistory) => {
+const getNewMoveHistory = (data, startingPos, destination, myPieces, player, moveHistory) => {
     let newMoveHistory = [...moveHistory];
-    let moveName = generateMoveName(data, destination, myPieces, player);
+    let moveName = generateMoveName(data, startingPos, destination, myPieces, player);
     let move;
     if(moveName != "O-O" && moveName != "O-O-O"){
-        move = {initialPos: selectedPieceLoc, destination: destination, piece: pieceSelected, name: moveName};
+        move = {initialPos: selectedPieceLoc, destination: destination, piece: data[startingPos], name: moveName};
     }
     else{
-        move = {initialPos: selectedPieceLoc, destination: moveName, name: moveName};
+        move = {initialPos: selectedPieceLoc, destination: moveName, piece: data[startingPos], name: moveName};
     }
     newMoveHistory.push(move);
     return newMoveHistory;
@@ -1161,7 +1162,7 @@ const updateMoveHistory = (moveHistory, setMoveHistory, suffix) => {
     
 }
 
-const generateMoveName = (data, destination, myPieces, player) => {
+const generateMoveName = (data, startingPos, destination, myPieces, player) => {
     let theirColour;
     
     if(player == "white"){
@@ -1169,28 +1170,28 @@ const generateMoveName = (data, destination, myPieces, player) => {
     } 
     else theirColour = "white";
 
-    switch(pieceSelected.charAt(1)){
+    switch(data[startingPos].charAt(1)){
         case "p":
 
-            if(selectedPieceLoc.charAt(0) != destination.charAt(0)){
-                return `${selectedPieceLoc.charAt(0)}x${destination}`;
+            if(startingPos.charAt(0) != destination.charAt(0)){
+                return `${startingPos.charAt(0)}x${destination}`;
             }
             
             return destination;
             
         case "n":
             for(let knight in myPieces.knights){
-                if(knight != selectedPieceLoc && myPieces.knights[knight].includes(destination)){
-                    if(knight.charAt(0) == selectedPieceLoc.charAt(0)){
+                if(knight != startingPos && myPieces.knights[knight].includes(destination)){
+                    if(knight.charAt(0) == startingPos.charAt(0)){
                         if(data[destination].charAt(0) == theirColour.charAt(0)){
-                            return `N${selectedPieceLoc.charAt(1)}x${destination}`;
+                            return `N${startingPos.charAt(1)}x${destination}`;
                         }
-                        return `N${selectedPieceLoc.charAt(1)}${destination}`;
+                        return `N${startingPos.charAt(1)}${destination}`;
                     }
                     if(data[destination].charAt(0) == theirColour.charAt(0)){
-                        return `N${selectedPieceLoc.charAt(0)}x${destination}`;
+                        return `N${startingPos.charAt(0)}x${destination}`;
                     }
-                    return `N${selectedPieceLoc.charAt(0)}${destination}`;
+                    return `N${startingPos.charAt(0)}${destination}`;
                 }
             }
 
@@ -1202,17 +1203,17 @@ const generateMoveName = (data, destination, myPieces, player) => {
             
         case "b":
             for(let bishop in myPieces.bishops){
-                if(bishop != selectedPieceLoc && myPieces.bishops[bishop].includes(destination)){
-                    if(bishop.charAt(0) == selectedPieceLoc.charAt(0)){
+                if(bishop != startingPos && myPieces.bishops[bishop].includes(destination)){
+                    if(bishop.charAt(0) == startingPos.charAt(0)){
                         if(data[destination].charAt(0) == theirColour.charAt(0)){
-                            return `B${selectedPieceLoc.charAt(1)}x${destination}`;
+                            return `B${startingPos.charAt(1)}x${destination}`;
                         }
-                        return `B${selectedPieceLoc.charAt(1)}${destination}`;
+                        return `B${startingPos.charAt(1)}${destination}`;
                     }
                     if(data[destination].charAt(0) == theirColour.charAt(0)){
-                        return `B${selectedPieceLoc.charAt(0)}x${destination}`;
+                        return `B${startingPos.charAt(0)}x${destination}`;
                     }
-                    return `B${selectedPieceLoc.charAt(0)}${destination}`;
+                    return `B${startingPos.charAt(0)}${destination}`;
                 }
             }
 
@@ -1223,31 +1224,31 @@ const generateMoveName = (data, destination, myPieces, player) => {
             return `B${destination}`;
             
         case "r":
-            if(player == "white" && whiteCastlingRights[0] && selectedPieceLoc == "h1"){
+            if(player == "white" && whiteCastlingRights[0] && startingPos == "h1"){
                 whiteCastlingRights[0] = false;
             }
-            else if(player == "white" && whiteCastlingRights[1] && selectedPieceLoc == "a1"){
+            else if(player == "white" && whiteCastlingRights[1] && startingPos == "a1"){
                 whiteCastlingRights[1] = false;
             }
-            else if(player == "black" && blackCastlingRights[0] && selectedPieceLoc == "h8"){
+            else if(player == "black" && blackCastlingRights[0] && startingPos == "h8"){
                 blackCastlingRights[0] = false;
             }
-            else if(player == "black" && blackCastlingRights[1] && selectedPieceLoc == "a8"){
+            else if(player == "black" && blackCastlingRights[1] && startingPos == "a8"){
                 blackCastlingRights[1] = false;
             }
 
             for(let rook in myPieces.rooks){
-                if(rook != selectedPieceLoc && myPieces.rooks[rook].includes(destination)){
-                    if(rook.charAt(0) == selectedPieceLoc.charAt(0)){
+                if(rook != startingPos && myPieces.rooks[rook].includes(destination)){
+                    if(rook.charAt(0) == startingPos.charAt(0)){
                         if(data[destination].charAt(0) == theirColour.charAt(0)){
-                            return `R${selectedPieceLoc.charAt(1)}x${destination}`;
+                            return `R${startingPos.charAt(1)}x${destination}`;
                         }
-                        return `R${selectedPieceLoc.charAt(1)}${destination}`;
+                        return `R${startingPos.charAt(1)}${destination}`;
                     }
                     if(data[destination].charAt(0) == theirColour.charAt(0)){
-                        return `R${selectedPieceLoc.charAt(0)}x${destination}`;
+                        return `R${startingPos.charAt(0)}x${destination}`;
                     }
-                    return `R${selectedPieceLoc.charAt(0)}${destination}`;
+                    return `R${startingPos.charAt(0)}${destination}`;
                 }
             }
 
@@ -1259,17 +1260,17 @@ const generateMoveName = (data, destination, myPieces, player) => {
             
         case "q":
             for(let queen in myPieces.queens){
-                if(queen != selectedPieceLoc && myPieces.queens[queen].includes(destination)){
-                    if(queen.charAt(0) == selectedPieceLoc.charAt(0)){
+                if(queen != startingPos && myPieces.queens[queen].includes(destination)){
+                    if(queen.charAt(0) == startingPos.charAt(0)){
                         if(data[destination].charAt(0) == theirColour.charAt(0)){
-                            return `Q${selectedPieceLoc.charAt(1)}x${destination}`;
+                            return `Q${startingPos.charAt(1)}x${destination}`;
                         }
-                        return `Q${selectedPieceLoc.charAt(1)}${destination}`;
+                        return `Q${startingPos.charAt(1)}${destination}`;
                     }
                     if(data[destination].charAt(0) == theirColour.charAt(0)){
-                        return `Q${selectedPieceLoc.charAt(0)}x${destination}`;
+                        return `Q${startingPos.charAt(0)}x${destination}`;
                     }
-                    return `Q${selectedPieceLoc.charAt(0)}${destination}`;
+                    return `Q${startingPos.charAt(0)}${destination}`;
                 }
             }
 
@@ -1290,10 +1291,10 @@ const generateMoveName = (data, destination, myPieces, player) => {
             }
 
             // if castles
-            if(selectedPieceLoc.charAt(0) == "e" && (destination.charAt(0) == "g" || destination.charAt(0) == "h")){
+            if(startingPos.charAt(0) == "e" && (destination.charAt(0) == "g" || destination.charAt(0) == "h")){
                 return "O-O";
             }
-            else if(selectedPieceLoc.charAt(0) == "e" && (destination.charAt(0) == "c" || destination.charAt(0) == "a")){
+            else if(startingPos.charAt(0) == "e" && (destination.charAt(0) == "c" || destination.charAt(0) == "a")){
                 return "O-O-O";
             }
 
@@ -1311,7 +1312,7 @@ const generateMoveName = (data, destination, myPieces, player) => {
     }
 }
 
-const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial, move, capture]) => {
+const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial, move, capture, gamemode]) => {
 
     if(promotion == "enabled") return;
 
@@ -1365,324 +1366,326 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
         return false;
     }
 
-    // castle
-    if(pieceSelected.charAt(1) == "k"){
-        let kingLoc = Object.keys(myPieces.king)[0];
-        if(player == "white"){
-            if(myPieces.king[kingLoc].includes("O-O") && (pieceLoc == "g1" || pieceLoc == "h1")){
-            
-                //move piece
-                let newData = {...data};
-                newData[selectedPieceLoc] = "";
-                newData["h1"] = "";
-                newData["g1"] = pieceSelected;
-                newData["f1"] = "wr";
-
-                delete myPieces.king[selectedPieceLoc];
-                myPieces.king["g1"] = [];
-
-                delete myPieces.rooks["h1"];
-                myPieces.rooks["f1"] = [];
-
-                setData(newData);
-                let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-                updateLegalMoves(newData, newMoveHistory);
-                updatePieces();
-                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-                setPlayer(nextPlayer);
-                deselectSelectedPiece();
-
-                move.play();
-
-                whiteCastlingRights = [false, false];
-                return;
-            }
-            else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c1" || pieceLoc == "a1")){
-                //move piece
-                let newData = {...data};
-                newData[selectedPieceLoc] = "";
-                newData["a1"] = "";
-                newData["c1"] = pieceSelected;
-                newData["d1"] = "wr";
-
-                delete myPieces.king[selectedPieceLoc];
-                myPieces.king["c1"] = [];
-
-                delete myPieces.rooks["a1"];
-                myPieces.rooks["d1"] = [];
-
-                setData(newData);
-                let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-                updateLegalMoves(newData, newMoveHistory);
-                updatePieces();
-                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-                setPlayer(nextPlayer);
-                deselectSelectedPiece();
-
-                move.play();
-
-                whiteCastlingRights = [false, false];
-                return;
-            }
-        }
-        else{
-            if(myPieces.king[kingLoc].includes("O-O") && (pieceLoc == "g8" || pieceLoc == "h8")){
-            
-                //move piece
-                let newData = {...data};
-                newData[selectedPieceLoc] = "";
-                newData["h8"] = "";
-                newData["g8"] = pieceSelected;
-                newData["f8"] = "br";
-
-                delete myPieces.king[selectedPieceLoc];
-                myPieces.king["g8"] = [];
-
-                delete myPieces.rooks["h8"];
-                myPieces.rooks["f8"] = [];
-
-                setData(newData);
-                let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-                updateLegalMoves(newData, newMoveHistory);
-                updatePieces();
-                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-                setPlayer(nextPlayer);
-                deselectSelectedPiece();
-
-                move.play();
-
-                blackCastlingRights = [false, false];
-                return;
-            }
-            else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c8" || pieceLoc == "a8")){
-                //move piece
-                let newData = {...data};
-                newData[selectedPieceLoc] = "";
-                newData["a8"] = "";
-                newData["c8"] = pieceSelected;
-                newData["d8"] = "br";
-
-                delete myPieces.king[selectedPieceLoc];
-                myPieces.king["c8"] = [];
-
-                delete myPieces.rooks["a8"];
-                myPieces.rooks["d8"] = [];
-
-                setData(newData);
-                let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-                updateLegalMoves(newData, newMoveHistory);
-                updatePieces();
-                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-                setPlayer(nextPlayer);
-                deselectSelectedPiece();
-
-                move.play();
-
-                blackCastlingRights = [false, false];
-                return;
-            }
-        }
-        
-    }
-
-    // En Passant
-    if(pieceSelected.charAt(1) == "p"){
-        if(myPieces.pawns[selectedPieceLoc].includes("x->")){
-            let squaresUp = 1;
-            if(pieceSelected.charAt(0) == "b"){
-                squaresUp = -1;
-            }
-
-            if(pieceLoc == (nextChar(selectedPieceLoc.charAt(0)) + (parseInt(selectedPieceLoc.charAt(1)) + squaresUp))){
-                //move piece
-                let newData = {...data};
-                newData[selectedPieceLoc] = "";
-                newData[pieceLoc] = pieceSelected;
-                let theirPawnLoc = pieceLoc.charAt(0) + (parseInt(pieceLoc.charAt(1))-squaresUp);
-                newData[theirPawnLoc] = "";
-
-                if(player == "white"){
-                    let newMaterial = {...material};
-                    newMaterial.white.push("p");
-                    setMaterial(newMaterial);
-                }
-                else {
-                    let newMaterial = {...material};
-                    newMaterial.black.push("p");
-                    setMaterial(newMaterial);
-                }
-                
-
-                delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
-                myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
-
-                
-                delete theirPieces[getPieceTypeByLetter(data[theirPawnLoc].charAt(1))][theirPawnLoc];
-
-
-                setData(newData);
-                let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-                updateLegalMoves(newData, newMoveHistory);
-                updatePieces();
-                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-                setPlayer(nextPlayer);
-                deselectSelectedPiece();
-
-                capture.play();
-
-                return;
-            }
-            
-        }
-        else if(myPieces.pawns[selectedPieceLoc].includes("<-x")){
-            let squaresUp = 1;
-            if(pieceSelected.charAt(0) == "b"){
-                squaresUp = -1;
-            }
-
-            if(pieceLoc == (prevChar(selectedPieceLoc.charAt(0)) + (parseInt(selectedPieceLoc.charAt(1)) + squaresUp))){
-                //move piece
-                let newData = {...data};
-                newData[selectedPieceLoc] = "";
-                newData[pieceLoc] = pieceSelected;
-                let theirPawnLoc = pieceLoc.charAt(0) + (parseInt(pieceLoc.charAt(1))-squaresUp);
-                newData[theirPawnLoc] = "";
-
-                if(player == "white"){
-                    let newMaterial = {...material};
-                    newMaterial.white.push("p");
-                    setMaterial(newMaterial);
-                }
-                else {
-                    let newMaterial = {...material};
-                    newMaterial.black.push("p");
-                    setMaterial(newMaterial);
-                }
-                
-
-                delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
-                myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
-
-
-                
-                delete theirPieces[getPieceTypeByLetter(data[theirPawnLoc].charAt(1))][theirPawnLoc];
-
-
-                setData(newData);
-                let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-                updateLegalMoves(newData, newMoveHistory);
-                updatePieces();
-                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-                setPlayer(nextPlayer);
-                deselectSelectedPiece();
-
-                capture.play();
-
-                return;
-            }
-            
-        }
-    }
-
-    // move a piece to empty square
-    if(piece == "" && pieceSelected != "") {
-
-        // move piece if possible
-        if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
-
-            if(checkForPromotion()){
-                isCapture = false;
-                targetLoc = pieceLoc;
-                targetPiece = "";
-                setPromotionColour(player.charAt(0));
-                setPromotion("enabled");
-                return;
-            }
-
-            //move piece
-            let newData = {...data};
-            newData[selectedPieceLoc] = "";
-            newData[pieceLoc] = pieceSelected;
-
-            delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
-            myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
-
-            setData(newData);
-            let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-            updateLegalMoves(newData, newMoveHistory);
-            updatePieces();
-            updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-            setPlayer(nextPlayer);
-            move.play();
-
-        }
-
-        deselectSelectedPiece();
-    }
-    // capture piece
-    else if(piece.charAt(0) == nextPlayer.charAt(0) && pieceSelected != ""){
-        // move piece if possible
-        if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
-
-            if(checkForPromotion()){
-                isCapture = true;
-                targetLoc = pieceLoc;
-                targetPiece = piece;
-                setPromotionColour(player.charAt(0));
-                setPromotion("enabled");
-                return;
-            }
-
-
-            //move piece
-            let newData = {...data};
-            newData[selectedPieceLoc] = "";
-            newData[pieceLoc] = pieceSelected;
-
+    if(gamemode == "Self Play" || player == HUMAN_PLAYER){
+        // castle
+        if(pieceSelected.charAt(1) == "k"){
+            let kingLoc = Object.keys(myPieces.king)[0];
             if(player == "white"){
-                let newMaterial = {...material};
-                newMaterial.white.push(data[pieceLoc].charAt(1));
-                setMaterial(newMaterial);
+                if(myPieces.king[kingLoc].includes("O-O") && (pieceLoc == "g1" || pieceLoc == "h1")){
+                
+                    //move piece
+                    let newData = {...data};
+                    newData[selectedPieceLoc] = "";
+                    newData["h1"] = "";
+                    newData["g1"] = pieceSelected;
+                    newData["f1"] = "wr";
+
+                    delete myPieces.king[selectedPieceLoc];
+                    myPieces.king["g1"] = [];
+
+                    delete myPieces.rooks["h1"];
+                    myPieces.rooks["f1"] = [];
+
+                    setData(newData);
+                    let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                    updateLegalMoves(newData, newMoveHistory);
+                    updatePieces();
+                    updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                    setPlayer(nextPlayer);
+                    deselectSelectedPiece();
+
+                    move.play();
+
+                    whiteCastlingRights = [false, false];
+                    return;
+                }
+                else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c1" || pieceLoc == "a1")){
+                    //move piece
+                    let newData = {...data};
+                    newData[selectedPieceLoc] = "";
+                    newData["a1"] = "";
+                    newData["c1"] = pieceSelected;
+                    newData["d1"] = "wr";
+
+                    delete myPieces.king[selectedPieceLoc];
+                    myPieces.king["c1"] = [];
+
+                    delete myPieces.rooks["a1"];
+                    myPieces.rooks["d1"] = [];
+
+                    setData(newData);
+                    let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                    updateLegalMoves(newData, newMoveHistory);
+                    updatePieces();
+                    updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                    setPlayer(nextPlayer);
+                    deselectSelectedPiece();
+
+                    move.play();
+
+                    whiteCastlingRights = [false, false];
+                    return;
+                }
             }
-            else {
-                let newMaterial = {...material};
-                newMaterial.black.push(data[pieceLoc].charAt(1));
-                setMaterial(newMaterial);
+            else{
+                if(myPieces.king[kingLoc].includes("O-O") && (pieceLoc == "g8" || pieceLoc == "h8")){
+                
+                    //move piece
+                    let newData = {...data};
+                    newData[selectedPieceLoc] = "";
+                    newData["h8"] = "";
+                    newData["g8"] = pieceSelected;
+                    newData["f8"] = "br";
+
+                    delete myPieces.king[selectedPieceLoc];
+                    myPieces.king["g8"] = [];
+
+                    delete myPieces.rooks["h8"];
+                    myPieces.rooks["f8"] = [];
+
+                    setData(newData);
+                    let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                    updateLegalMoves(newData, newMoveHistory);
+                    updatePieces();
+                    updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                    setPlayer(nextPlayer);
+                    deselectSelectedPiece();
+
+                    move.play();
+
+                    blackCastlingRights = [false, false];
+                    return;
+                }
+                else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c8" || pieceLoc == "a8")){
+                    //move piece
+                    let newData = {...data};
+                    newData[selectedPieceLoc] = "";
+                    newData["a8"] = "";
+                    newData["c8"] = pieceSelected;
+                    newData["d8"] = "br";
+
+                    delete myPieces.king[selectedPieceLoc];
+                    myPieces.king["c8"] = [];
+
+                    delete myPieces.rooks["a8"];
+                    myPieces.rooks["d8"] = [];
+
+                    setData(newData);
+                    let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                    updateLegalMoves(newData, newMoveHistory);
+                    updatePieces();
+                    updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                    setPlayer(nextPlayer);
+                    deselectSelectedPiece();
+
+                    move.play();
+
+                    blackCastlingRights = [false, false];
+                    return;
+                }
             }
-
-            delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
-            myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
-
-            delete theirPieces[getPieceTypeByLetter(piece.charAt(1))][pieceLoc];
-
-
-            setData(newData);
-            let newMoveHistory = getNewMoveHistory(data, pieceLoc, myPieces, player, moveHistory);
-            updateLegalMoves(newData, newMoveHistory);
-            updatePieces();
-            updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
-            setPlayer(nextPlayer);
-            capture.play();
-
+            
         }
 
-        deselectSelectedPiece();
-    }
+        // En Passant
+        if(pieceSelected.charAt(1) == "p"){
+            if(myPieces.pawns[selectedPieceLoc].includes("x->")){
+                let squaresUp = 1;
+                if(pieceSelected.charAt(0) == "b"){
+                    squaresUp = -1;
+                }
 
-    // select a piece when no other is selected
-    else if((player == "white" && piece.charAt(0) == 'w' || player == "black" && piece.charAt(0) == 'b') && pieceSelected == ""){
-        selectNewPiece();
-    }
+                if(pieceLoc == (nextChar(selectedPieceLoc.charAt(0)) + (parseInt(selectedPieceLoc.charAt(1)) + squaresUp))){
+                    //move piece
+                    let newData = {...data};
+                    newData[selectedPieceLoc] = "";
+                    newData[pieceLoc] = pieceSelected;
+                    let theirPawnLoc = pieceLoc.charAt(0) + (parseInt(pieceLoc.charAt(1))-squaresUp);
+                    newData[theirPawnLoc] = "";
 
-    // deselect the selected piece by clicking on it
-    else if((player == "white" && piece.charAt(0) == 'w' || player == "black" && piece.charAt(0) == 'b') && pieceSelected != "" && selectedPieceLoc == pieceLoc){
-        deselectSelectedPiece();
-    }
+                    if(player == "white"){
+                        let newMaterial = {...material};
+                        newMaterial.white["p"]++;
+                        setMaterial(newMaterial);
+                    }
+                    else {
+                        let newMaterial = {...material};
+                        newMaterial.black["p"]++;
+                        setMaterial(newMaterial);
+                    }
+                    
 
-    // deselect the selected piece and select a different piece
-    else if((player == "white" && piece.charAt(0) == 'w' || player == "black" && piece.charAt(0) == 'b') && pieceSelected != "" && piece != "" && selectedPieceLoc != pieceLoc){
-        deselectSelectedPiece();
-        selectNewPiece();
+                    delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+                    myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
+
+                    
+                    delete theirPieces[getPieceTypeByLetter(data[theirPawnLoc].charAt(1))][theirPawnLoc];
+
+
+                    setData(newData);
+                    let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                    updateLegalMoves(newData, newMoveHistory);
+                    updatePieces();
+                    updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                    setPlayer(nextPlayer);
+                    deselectSelectedPiece();
+
+                    capture.play();
+
+                    return;
+                }
+                
+            }
+            else if(myPieces.pawns[selectedPieceLoc].includes("<-x")){
+                let squaresUp = 1;
+                if(pieceSelected.charAt(0) == "b"){
+                    squaresUp = -1;
+                }
+
+                if(pieceLoc == (prevChar(selectedPieceLoc.charAt(0)) + (parseInt(selectedPieceLoc.charAt(1)) + squaresUp))){
+                    //move piece
+                    let newData = {...data};
+                    newData[selectedPieceLoc] = "";
+                    newData[pieceLoc] = pieceSelected;
+                    let theirPawnLoc = pieceLoc.charAt(0) + (parseInt(pieceLoc.charAt(1))-squaresUp);
+                    newData[theirPawnLoc] = "";
+
+                    if(player == "white"){
+                        let newMaterial = {...material};
+                        newMaterial.white["p"]++;
+                        setMaterial(newMaterial);
+                    }
+                    else {
+                        let newMaterial = {...material};
+                        newMaterial.black["p"]++;
+                        setMaterial(newMaterial);
+                    }
+                    
+
+                    delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+                    myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
+
+
+                    
+                    delete theirPieces[getPieceTypeByLetter(data[theirPawnLoc].charAt(1))][theirPawnLoc];
+
+
+                    setData(newData);
+                    let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                    updateLegalMoves(newData, newMoveHistory);
+                    updatePieces();
+                    updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                    setPlayer(nextPlayer);
+                    deselectSelectedPiece();
+
+                    capture.play();
+
+                    return;
+                }
+                
+            }
+        }
+
+        // move a piece to empty square
+        if(piece == "" && pieceSelected != "") {
+
+            // move piece if possible
+            if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
+
+                if(checkForPromotion()){
+                    isCapture = false;
+                    targetLoc = pieceLoc;
+                    targetPiece = "";
+                    setPromotionColour(player.charAt(0));
+                    setPromotion("enabled");
+                    return;
+                }
+
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData[pieceLoc] = pieceSelected;
+
+                delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+                myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
+
+                setData(newData);
+                let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                updateLegalMoves(newData, newMoveHistory);
+                updatePieces();
+                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                setPlayer(nextPlayer);
+                move.play();
+
+            }
+
+            deselectSelectedPiece();
+        }
+        // capture piece
+        else if(piece.charAt(0) == nextPlayer.charAt(0) && pieceSelected != ""){
+            // move piece if possible
+            if(myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc].includes(pieceLoc)){
+
+                if(checkForPromotion()){
+                    isCapture = true;
+                    targetLoc = pieceLoc;
+                    targetPiece = piece;
+                    setPromotionColour(player.charAt(0));
+                    setPromotion("enabled");
+                    return;
+                }
+
+
+                //move piece
+                let newData = {...data};
+                newData[selectedPieceLoc] = "";
+                newData[pieceLoc] = pieceSelected;
+
+                if(player == "white"){
+                    let newMaterial = {...material};
+                    newMaterial.white[data[pieceLoc].charAt(1)]++;
+                    setMaterial(newMaterial);
+                }
+                else {
+                    let newMaterial = {...material};
+                    newMaterial.black[data[pieceLoc].charAt(1)]++;
+                    setMaterial(newMaterial);
+                }
+
+                delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
+                myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
+
+                delete theirPieces[getPieceTypeByLetter(piece.charAt(1))][pieceLoc];
+
+
+                setData(newData);
+                let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
+                updateLegalMoves(newData, newMoveHistory);
+                updatePieces();
+                updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
+                setPlayer(nextPlayer);
+                capture.play();
+
+            }
+
+            deselectSelectedPiece();
+        }
+
+        // select a piece when no other is selected
+        else if((player == "white" && piece.charAt(0) == 'w' || player == "black" && piece.charAt(0) == 'b') && pieceSelected == ""){
+            selectNewPiece();
+        }
+
+        // deselect the selected piece by clicking on it
+        else if((player == "white" && piece.charAt(0) == 'w' || player == "black" && piece.charAt(0) == 'b') && pieceSelected != "" && selectedPieceLoc == pieceLoc){
+            deselectSelectedPiece();
+        }
+
+        // deselect the selected piece and select a different piece
+        else if((player == "white" && piece.charAt(0) == 'w' || player == "black" && piece.charAt(0) == 'b') && pieceSelected != "" && piece != "" && selectedPieceLoc != pieceLoc){
+            deselectSelectedPiece();
+            selectNewPiece();
+        }
     }
     
 }
@@ -1755,12 +1758,12 @@ const Board = (props) => {
 
                 if(player == "white"){
                     let newMaterial = {...props.material};
-                    newMaterial.white.push(props.promotionPiece);
+                    newMaterial.white[props.promotionPiece]++;
                     props.setMaterial(newMaterial);
                 }
                 else {
                     let newMaterial = {...props.material};
-                    newMaterial.white.push(props.promotionPiece);
+                    newMaterial.white[props.promotionPiece]++;
                     props.setMaterial(newMaterial);
                 }
 
@@ -1775,14 +1778,14 @@ const Board = (props) => {
 
                 if(player == "white"){
                     let newMaterial = {...props.material};
-                    newMaterial.white.push(data[targetLoc].charAt(1));
-                    newMaterial.white.push(props.promotionPiece);
+                    newMaterial.white[data[targetLoc].charAt(1)]++;
+                    newMaterial.white[props.promotionPiece]++;
                     props.setMaterial(newMaterial);
                 }
                 else {
                     let newMaterial = {...props.material};
-                    newMaterial.black.push(data[targetLoc].charAt(1));
-                    newMaterial.white.push(props.promotionPiece);
+                    newMaterial.black[data[targetLoc].charAt(1)]++;
+                    newMaterial.white[props.promotionPiece]++;
                     props.setMaterial(newMaterial);
                 }
 
@@ -1803,7 +1806,7 @@ const Board = (props) => {
 
             setData(newData);
 
-            let newMoveHistory = getNewMoveHistory(data, targetLoc, myPieces, player, props.moveHistory);
+            let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, targetLoc, myPieces, player, props.moveHistory);
 
             updateLegalMoves(newData, newMoveHistory);
 
@@ -1827,6 +1830,362 @@ const Board = (props) => {
         }
     }, [props.promotionPiece]);
 
+    useEffect(() => {
+        if(true){ // props.gamemode == "AI" && player == AI_PLAYER
+
+            fetch('http://localhost:3001/api', {
+                method: "POST",
+                headers: {
+                    'content-type': "application/json"
+                },
+                body: JSON.stringify({
+                    hello: "Joey"
+                })
+                
+            }).then(res => {
+                if(res.ok) console.log("Success");
+                else console.log("Failure");
+            }).catch(err => console.log(err));
+            
+
+            let humanPieces, AiPieces, AiCastlingRights, humanCastlingRights;
+            if(AI_PLAYER == "white"){
+                humanPieces = JSON.parse(JSON.stringify(blackPieces));
+                AiPieces = JSON.parse(JSON.stringify(whitePieces));
+                AiCastlingRights = [...whiteCastlingRights];
+                humanCastlingRights = [...blackCastlingRights];
+            }
+            else{
+                humanPieces = JSON.parse(JSON.stringify(whitePieces));
+                AiPieces = JSON.parse(JSON.stringify(blackPieces));
+                humanCastlingRights = [...whiteCastlingRights];
+                AiCastlingRights = [...blackCastlingRights];
+            }
+
+            let tempData = {...data};
+            let material = JSON.parse(JSON.stringify(props.material));
+            let moveHistory = [...props.moveHistory];
+
+            const calculateNetMaterial = (mat) => {
+                let whiteMaterial = mat.white["p"] + mat.white["n"]*3 + mat.white["b"]*3 + mat.white["r"]*5 + mat.white["q"]*9;
+                let blackMaterial = mat.black["p"] + mat.black["n"]*3 + mat.black["b"]*3 + mat.black["r"]*5 + mat.black["q"]*9;
+
+                return whiteMaterial - blackMaterial;
+            }
+
+            // build decision tree
+            let tree = {eval: 0, children: [], data: tempData, moveHistory: moveHistory, AiPieces: AiPieces, humanPieces: humanPieces, AiCastlingRights: AiCastlingRights, humanCastlingRights: humanCastlingRights, material: material};
+
+            const buildTree = (tree, data, moveHistory, myPieces, theirPieces, myColour, myCastlingRights, theirCastlingRights, material, currentDepth) => {
+                let theirColour = (myColour == "white") ? "black" : "white";
+                
+                for(let pieceType in myPieces){
+                    for(let pieceLoc in myPieces[pieceType]){
+                        for(let destination of myPieces[pieceType][pieceLoc]){
+                            
+                            let newMoveHistory = [...moveHistory];
+                            let newMaterial = JSON.parse(JSON.stringify(material));
+                            let newData = JSON.parse(JSON.stringify(data));
+                            let myNewPieces = JSON.parse(JSON.stringify(myPieces));
+                            let theirNewPieces = JSON.parse(JSON.stringify(theirPieces));
+                            let myNewCastlingRights = [...myCastlingRights];
+                            let theirNewCastlingRights = [...theirCastlingRights];
+                            let newAiCastlingRights = (myColour == AI_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
+                            let newHumanCastlingRights = (myColour == HUMAN_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
+                            if(pieceType == "king") {
+                                myNewCastlingRights = [false, false];
+                            }
+                            if(destination == "O-O"){
+                                if(myColour == "white"){
+                                    
+                                    newData["e1"] = "";
+                                    newData["h1"] = "";
+                                    newData["g1"] = "wk";
+                                    newData["f1"] = "wr";
+    
+                                    delete myNewPieces.king["e1"];
+                                    myNewPieces.king["g1"] = [];
+    
+                                    delete myNewPieces.rooks["h1"];
+                                    myNewPieces.rooks["f1"] = [];
+    
+                                    newMoveHistory.push({initialPos: "e1", destination: "g1", piece: "wk", name: "O-O"});
+    
+                                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                                }
+                                else {
+                                    newData["e8"] = "";
+                                    newData["h8"] = "";
+                                    newData["g8"] = "bk";
+                                    newData["f8"] = "br";
+    
+                                    delete myNewPieces.king["e8"];
+                                    myNewPieces.king["g8"] = [];
+    
+                                    delete myNewPieces.rooks["h8"];
+                                    myNewPieces.rooks["f8"] = [];
+    
+                                    newMoveHistory.push({initialPos: "e8", destination: "g8", piece: "bk", name: "O-O"});
+                                
+                                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                                }
+                                
+                            }
+                            else if(destination == "O-O-O"){
+                                if(myColour == "white"){
+                                    
+                                    newData["e1"] = "";
+                                    newData["a1"] = "";
+                                    newData["c1"] = "wk";
+                                    newData["d1"] = "wr";
+    
+                                    delete myNewPieces.king["e1"];
+                                    myNewPieces.king["c1"] = [];
+    
+                                    delete myNewPieces.rooks["a1"];
+                                    myNewPieces.rooks["d1"] = [];
+    
+                                    newMoveHistory.push({initialPos: "e1", destination: "c1", piece: "wk", name: "O-O-O"});
+                                
+                                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                                }
+                                else {
+                                    newData["e8"] = "";
+                                    newData["a8"] = "";
+                                    newData["c8"] = "bk";
+                                    newData["d8"] = "br";
+    
+                                    delete myNewPieces.king["e8"];
+                                    myNewPieces.king["c8"] = [];
+    
+                                    delete myNewPieces.rooks["a8"];
+                                    myNewPieces.rooks["d8"] = [];
+    
+                                    newMoveHistory.push({initialPos: "e8", destination: "c8", piece: "bk", name: "O-O-O"});
+                                
+                                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                                }
+                            }
+                            else if(destination == "<-x"){
+                                let direction = 1;
+                                if(myColour == "black"){
+                                    direction = -1;
+                                }
+                                let myNewPawnLoc = prevChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
+                                let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
+    
+                                newData[pieceLoc] = "";
+                                newData[myNewPawnLoc] = myColour.charAt(0) + "p";
+    
+                                newData[theirPawnLoc] = "";
+    
+                                delete myNewPieces.pawns[pieceLoc];
+                                myNewPieces.pawns[myNewPawnLoc] = [];
+    
+                                delete theirNewPieces.pawns[theirPawnLoc];
+    
+                                newMaterial[myColour]["p"]++;
+    
+                                newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
+                            
+                                myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                            }
+                            else if(destination == "x->"){
+                                let direction = 1;
+                                if(myColour == "black"){
+                                    direction = -1;
+                                }
+                                let myNewPawnLoc = nextChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
+                                let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
+    
+                                newData[pieceLoc] = "";
+                                newData[myNewPawnLoc] = myColour.charAt(0) + "p";
+    
+                                newData[theirPawnLoc] = "";
+    
+                                delete myNewPieces.pawns[pieceLoc];
+                                myNewPieces.pawns[myNewPawnLoc] = [];
+    
+                                delete theirNewPieces.pawns[theirPawnLoc];
+    
+                                newMaterial[myColour]["p"]++;
+    
+                                newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
+                            
+                                myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                            }
+                            else if(data[destination] == ""){
+                                newData[pieceLoc] = "";
+                                delete myNewPieces[pieceType][pieceLoc];
+    
+                                if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
+                                    let newMoveHistory2 = [...newMoveHistory];
+                                    let newMaterial2 = {...newMaterial};
+                                    let newData2 = {...newData};
+                                    let myNewPieces2 = {...myNewPieces};
+                                    let theirNewPieces2 = {...theirNewPieces};
+
+                                    let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
+                                    let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
+    
+                                    newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                                    newMaterial2[myColour]["q"]++;
+                                    newData2[destination] = myColour.charAt(0) + "q";
+                                    myNewPieces2["queens"][destination] = [];
+                                    myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                                    theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                                    newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
+
+                                    let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                                    if(currentDepth < MAX_DEPTH){
+                                        buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                                    }
+                                    tree.children.push(subtree);
+                                    
+                                    newMoveHistory2 = [...newMoveHistory];
+                                    newMaterial2 = {...newMaterial};
+                                    newData2 = {...newData};
+                                    myNewPieces2 = {...myNewPieces};
+                                    theirNewPieces2 = {...theirNewPieces};
+    
+                                    newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                                    newMaterial2[myColour]["n"]++;
+                                    newData2[destination] = myColour.charAt(0) + "n";
+                                    myNewPieces2["knights"][destination] = [];
+                                    myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                                    theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                                    newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
+                                    
+                                    subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                                    if(currentDepth < MAX_DEPTH){
+                                        buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                                    }
+                                    tree.children.push(subtree);
+                                    continue;
+                                }
+    
+                                else {
+                                    newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
+                                    myNewPieces[pieceType][destination] = [];
+    
+                                    newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+    
+                                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                                }
+                            }
+                            else {
+    
+                                newMaterial[myColour][data[destination].charAt(1)]++;
+                                newData[pieceLoc] = "";
+    
+                                if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
+                                    let newMoveHistory2 = [...newMoveHistory];
+                                    let newMaterial2 = {...newMaterial};
+                                    let newData2 = JSON.parse(JSON.stringify(newData));
+                                    let myNewPieces2 = {...myNewPieces};
+                                    let theirNewPieces2 = {...theirNewPieces};
+
+                                    let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
+                                    let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
+    
+                                    newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                                    newMaterial2[myColour]["q"]++;
+                                    newData2[destination] = myColour.charAt(0) + "q";
+                                    myNewPieces2["queens"][destination] = [];
+                                    delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
+                                    myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                                    theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                                    newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
+
+                                    let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                                    if(currentDepth < MAX_DEPTH){
+                                        buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                                    }
+                                    tree.children.push(subtree);
+                                    
+                                    newMoveHistory2 = [...newMoveHistory];
+                                    newMaterial2 = {...newMaterial};
+                                    newData2 = {...newData};
+                                    myNewPieces2 = {...myNewPieces};
+                                    theirNewPieces2 = {...theirNewPieces};
+    
+                                    newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                                    newMaterial2[myColour]["n"]++;
+                                    newData2[destination] = myColour.charAt(0) + "n";
+                                    myNewPieces2["knights"][destination] = [];
+                                    delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
+                                    myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                                    theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                                    newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
+
+                                    subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                                    if(currentDepth < MAX_DEPTH){
+                                        buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                                    }
+                                    tree.children.push(subtree);
+                                    continue;
+                                }
+                                else {
+                                    myNewPieces[pieceType][destination] = [];
+    
+                                    delete theirNewPieces[getPieceTypeByLetter(data[destination].charAt(1))][destination];
+    
+                                    newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
+    
+                                    newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+    
+                                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+    
+                                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+                                }
+                            }
+                            
+                            let AiPieces = (myColour == AI_PLAYER) ? myNewPieces : theirNewPieces;
+                            let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces : theirNewPieces;
+
+                            let subtree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, AiPieces: AiPieces, humanPieces: humanPieces, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: newMaterial};
+                            if(currentDepth < MAX_DEPTH){
+                                buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                            }
+                            tree.children.push(subtree);
+                            
+                        }
+                    }
+                }
+            }
+            
+            //buildTree(tree, tempData, moveHistory, AiPieces, humanPieces, AI_PLAYER, AiCastlingRights, humanCastlingRights, material, 0);
+            //buildTree(tree, tempData, moveHistory, humanPieces, AiPieces, HUMAN_PLAYER, humanCastlingRights, AiCastlingRights, material, 0);
+
+            
+            //console.log(tree);
+            //console.log(calculateNetMaterial(material));
+
+        }
+    }, [props.gamemode, player])
+
     
     for(let i = 0; i < 8; i++){
         row = [];
@@ -1837,7 +2196,7 @@ const Board = (props) => {
 
             pieceName = data[letter+(8-i)];
 
-            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial, move, capture]} key = {letter+(8-i)}/>);
+            row.push(<Square squareTypes = {currentSquareTypes} squareLoc = {letter+(8-i)} backgroundImage = {pieceName} onClickFunction={onClick} onClickParameters={[pieceName, player, setPlayer, letter+(8-i), currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial, move, capture, props.gamemode]} key = {letter+(8-i)}/>);
             letter = nextChar(letter);
         }
         
