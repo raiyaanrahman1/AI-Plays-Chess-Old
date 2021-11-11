@@ -23,10 +23,16 @@ function prevChar(c) {
 
 function sound(src) {
     this.sound = document.createElement("audio");
-    this.sound.src = src;
+    // this.sound.src = src;
     this.sound.setAttribute("preload", "auto");
     this.sound.setAttribute("controls", "none");
     this.sound.style.display = "none";
+
+    this.source = document.createElement("source");
+    this.source.src = src;
+    this.source.type = "audio/mpeg";
+    this.sound.appendChild(this.source);
+
     document.body.appendChild(this.sound);
     this.play = function(){
       this.sound.play();
@@ -35,6 +41,9 @@ function sound(src) {
       this.sound.pause();
     }
 }
+
+let move = new sound(moveSound);
+let capture = new sound(captureSound);
   
 // structure of pieces objects
     // {piece: {"location": [legal moves], ...}}
@@ -1699,8 +1708,9 @@ const Board = (props) => {
     const board = [];
     
     let [player, setPlayer] = useState("white");
-    let [move] = useState(new sound(moveSound));
-    let [capture] = useState(new sound(captureSound));
+    // let [move] = useState(new sound(moveSound));
+    // let [capture] = useState(new sound(captureSound));
+    
     
     let row, squareType, letter, pieceName, firstSquareLight = true;
     
