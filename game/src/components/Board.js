@@ -1321,7 +1321,54 @@ const generateMoveName = (data, startingPos, destination, myPieces, player) => {
     }
 }
 
-const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial, move, capture, gamemode]) => {
+const postHumanMove = (tree, [piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode]) => {
+
+    fetch('http://localhost:3001/api', {
+        method: "POST",
+        headers: {
+            'content-type': "application/json"
+        },
+        body: JSON.stringify(tree)
+        
+    }).then(res => {
+        if(res.ok){
+            console.log("Successfully posted the human move");
+            fetch('http://localhost:3001/api').then(res => {
+                if(!res.ok) {
+                    return res.text().then(text => { throw new Error(text) })
+                 }
+                else {
+                    return res.json();
+               }    
+              }).then(tree => {
+                console.log("Got AI Move");
+                // console.log(tree.move);
+                let move = tree.moveHistory[tree.moveHistory.length-1];
+                console.log(move);
+                console.log(tree);
+                let newSquareTypes = {...currentSquareTypes};
+
+                pieceSelected = data[move.initialPos];
+                selectedPieceLoc = move.initialPos;
+
+                
+                newSquareTypes[move.initialPos] += "-highlighted";
+
+                if(move.name === "Qxg5"){
+                    console.log("For debugging");
+                }
+
+                onClick([data[move.destination], AI_PLAYER, setPlayer, move.destination, newSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode]);
+            }).catch(err => {console.log(err)});
+        }
+        else {
+            res.text().then(text => { throw new Error(text) })
+        }
+    }).catch(err => console.log(err));
+    // console.log(tree.moveHistory);
+}
+
+const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSquareTypes, data, setData, promotion, setPromotion, setPromotionColour, moveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode]) => {
 
     if(promotion == "enabled") return;
 
@@ -1338,6 +1385,17 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
             myPieces = blackPieces;
             theirPieces = whitePieces;
             nextPlayer = "white";
+        }
+    }
+
+    const updateOrigPieces = (myPieces, theirPieces) => {
+        if(player === "white"){
+            whitePieces = myPieces;
+            blackPieces = theirPieces;
+        }
+        else {
+            whitePieces = theirPieces;
+            blackPieces = myPieces;
         }
     }
 
@@ -1395,6 +1453,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 delete myPieces.rooks["h1"];
                 myPieces.rooks["f1"] = [];
 
+                updateOrigPieces(myPieces, theirPieces);
+
                 setData(newData);
                 let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
                 updateLegalMoves(newData, newMoveHistory);
@@ -1403,10 +1463,18 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
-                move.play();
+                moveSound.play();
                 //console.log("move 1 played");
 
                 whiteCastlingRights = [false, false];
+                if(player === HUMAN_PLAYER && gamemode === "AI"){
+                    let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                    let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                    let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length + 1, visited: false};
+                    let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                    postHumanMove(tree, onClickParameters);
+                }
+
                 return;
             }
             else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c1" || pieceLoc == "a1")){
@@ -1423,6 +1491,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 delete myPieces.rooks["a1"];
                 myPieces.rooks["d1"] = [];
 
+                updateOrigPieces(myPieces, theirPieces);
+
                 setData(newData);
                 let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
                 updateLegalMoves(newData, newMoveHistory);
@@ -1431,10 +1501,17 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
-                move.play();
+                moveSound.play();
                 //console.log("move 2 played");
 
                 whiteCastlingRights = [false, false];
+                if(player === HUMAN_PLAYER && gamemode === "AI"){
+                    let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                    let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                    let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length + 1, visited: false};
+                    let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                    postHumanMove(tree, onClickParameters);
+                }
                 return;
             }
         }
@@ -1454,6 +1531,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 delete myPieces.rooks["h8"];
                 myPieces.rooks["f8"] = [];
 
+                updateOrigPieces(myPieces, theirPieces);
+
                 setData(newData);
                 let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
                 updateLegalMoves(newData, newMoveHistory);
@@ -1462,10 +1541,17 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
-                move.play();
+                moveSound.play();
                 //console.log("move 3 played");
 
                 blackCastlingRights = [false, false];
+                if(player === HUMAN_PLAYER && gamemode === "AI"){
+                    let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                    let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                    let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length + 1, visited: false};
+                    let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                    postHumanMove(tree, onClickParameters);
+                }
                 return;
             }
             else if(myPieces.king[kingLoc].includes("O-O-O") && (pieceLoc == "c8" || pieceLoc == "a8")){
@@ -1482,6 +1568,8 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 delete myPieces.rooks["a8"];
                 myPieces.rooks["d8"] = [];
 
+                updateOrigPieces(myPieces, theirPieces);
+
                 setData(newData);
                 let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
                 updateLegalMoves(newData, newMoveHistory);
@@ -1490,10 +1578,17 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 setPlayer(nextPlayer);
                 deselectSelectedPiece();
 
-                move.play();
+                moveSound.play();
                 //console.log("move 4 played");
 
                 blackCastlingRights = [false, false];
+                if(player === HUMAN_PLAYER && gamemode === "AI"){
+                    let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                    let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                    let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length + 1, visited: false};
+                    let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                    postHumanMove(tree, onClickParameters);
+                }
                 return;
             }
         }
@@ -1534,6 +1629,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 
                 delete theirPieces[getPieceTypeByLetter(data[theirPawnLoc].charAt(1))][theirPawnLoc];
 
+                updateOrigPieces(myPieces, theirPieces);
 
                 setData(newData);
                 let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
@@ -1544,6 +1640,13 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 deselectSelectedPiece();
 
                 capture.play();
+                if(player === HUMAN_PLAYER && gamemode === "AI"){
+                    let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                    let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                    let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length + 1, visited: false};
+                    let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                    postHumanMove(tree, onClickParameters);
+                }
 
                 return;
             }
@@ -1582,6 +1685,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 
                 delete theirPieces[getPieceTypeByLetter(data[theirPawnLoc].charAt(1))][theirPawnLoc];
 
+                updateOrigPieces(myPieces, theirPieces);
 
                 setData(newData);
                 let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
@@ -1592,6 +1696,13 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
                 deselectSelectedPiece();
 
                 capture.play();
+                if(player === HUMAN_PLAYER && gamemode === "AI"){
+                    let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                    let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                    let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length+ 1, visited: false};
+                    let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                    postHumanMove(tree, onClickParameters);
+                }
 
                 return;
             }
@@ -1622,14 +1733,23 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
             delete myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][selectedPieceLoc];
             myPieces[getPieceTypeByLetter(pieceSelected.charAt(1))][pieceLoc] = [];
 
+            updateOrigPieces(myPieces, theirPieces);
+
             setData(newData);
             let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
             updateLegalMoves(newData, newMoveHistory);
             updatePieces();
             updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
             setPlayer(nextPlayer);
-            move.play();
+            moveSound.play();
             //console.log("move 5 played");
+            if(player === HUMAN_PLAYER && gamemode === "AI"){
+                let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length + 1, visited: false};
+                let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                postHumanMove(tree, onClickParameters);
+            }
 
         }
 
@@ -1671,6 +1791,7 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
 
             delete theirPieces[getPieceTypeByLetter(piece.charAt(1))][pieceLoc];
 
+            updateOrigPieces(myPieces, theirPieces);
 
             setData(newData);
             let newMoveHistory = getNewMoveHistory(data, selectedPieceLoc, pieceLoc, myPieces, player, moveHistory);
@@ -1679,6 +1800,14 @@ const onClick = ([piece, player, setPlayer, pieceLoc, currentSquareTypes, setSqu
             updateMoveHistory(newMoveHistory, setMoveHistory, getMoveSuffix(myPieces, theirPieces));
             setPlayer(nextPlayer);
             capture.play();
+
+            if(player === HUMAN_PLAYER && gamemode === "AI"){
+                let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...material}, depth: newMoveHistory.length + 1, visited: false};
+                let onClickParameters = [piece, AI_PLAYER, setPlayer, pieceLoc, newSquareTypes, setSquareTypes, newData, setData, promotion, setPromotion, setPromotionColour, newMoveHistory, setMoveHistory, material, setMaterial, moveSound, capture, gamemode];
+                postHumanMove(tree, onClickParameters);
+            }
 
         }
 
@@ -1785,6 +1914,7 @@ const Board = (props) => {
                 myPieces[getPieceTypeByLetter(props.promotionPiece)][targetLoc] = [];  
                 move.play();         
                 //console.log("move 6 played");
+                
             }
             else {
                 //move piece
@@ -1842,392 +1972,90 @@ const Board = (props) => {
 
             pieceSelected = "";
             selectedPieceLoc = "";
+
+            if(player === HUMAN_PLAYER && props.gamemode === "AI"){
+                let myCastlingRights = player == "white" ? whiteCastlingRights : blackCastlingRights;
+                let theirCastlingRights = player == "white" ? blackCastlingRights : whiteCastlingRights;
+                let tree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: AI_PLAYER, AiPieces: theirPieces, humanPieces: myPieces, AiCastlingRights: theirCastlingRights, humanCastlingRights: myCastlingRights, material: {...props.material}, depth: newMoveHistory.length + 1, visited: false};
+                let onClickParameters = [pieceName, AI_PLAYER, setPlayer, selectedPieceLoc, newSquareTypes, setSquareTypes, newData, setData, props.promotion, props.setPromotion, props.setPromotionColour, newMoveHistory, newMoveHistory, props.material, props.setMaterial, move, capture, props.gamemode];
+                postHumanMove(tree, onClickParameters);
+            }
         }
     }, [props.promotionPiece]);
 
-    useEffect(() => {
-        if(props.gamemode == "AI" && player == AI_PLAYER){ // props.gamemode == "AI" && player == AI_PLAYER
+    // useEffect(() => {
+    //     if(props.gamemode == "AI" && player == AI_PLAYER){ // props.gamemode == "AI" && player == AI_PLAYER
 
-            // fetch('http://localhost:3001/api', {
-            //     method: "POST",
-            //     headers: {
-            //         'content-type': "application/json"
-            //     },
-            //     body: JSON.stringify({
-            //         hello: "Joey"
-            //     })
+    //         // fetch('http://localhost:3001/api', {
+    //         //     method: "POST",
+    //         //     headers: {
+    //         //         'content-type': "application/json"
+    //         //     },
+    //         //     body: JSON.stringify({
+    //         //         hello: "Joey"
+    //         //     })
                 
-            // }).then(res => {
-            //     if(res.ok) console.log("Success");
-            //     else console.log("Failure");
-            // }).catch(err => console.log(err));
+    //         // }).then(res => {
+    //         //     if(res.ok) console.log("Success");
+    //         //     else console.log("Failure");
+    //         // }).catch(err => console.log(err));
             
 
-            let humanPieces, AiPieces, AiCastlingRights, humanCastlingRights;
-            if(AI_PLAYER == "white"){
-                humanPieces = JSON.parse(JSON.stringify(blackPieces));
-                AiPieces = JSON.parse(JSON.stringify(whitePieces));
-                AiCastlingRights = [...whiteCastlingRights];
-                humanCastlingRights = [...blackCastlingRights];
-            }
-            else{
-                humanPieces = JSON.parse(JSON.stringify(whitePieces));
-                AiPieces = JSON.parse(JSON.stringify(blackPieces));
-                humanCastlingRights = [...whiteCastlingRights];
-                AiCastlingRights = [...blackCastlingRights];
-            }
+    //         let humanPieces, AiPieces, AiCastlingRights, humanCastlingRights;
+    //         if(AI_PLAYER == "white"){
+    //             humanPieces = JSON.parse(JSON.stringify(blackPieces));
+    //             AiPieces = JSON.parse(JSON.stringify(whitePieces));
+    //             AiCastlingRights = [...whiteCastlingRights];
+    //             humanCastlingRights = [...blackCastlingRights];
+    //         }
+    //         else{
+    //             humanPieces = JSON.parse(JSON.stringify(whitePieces));
+    //             AiPieces = JSON.parse(JSON.stringify(blackPieces));
+    //             humanCastlingRights = [...whiteCastlingRights];
+    //             AiCastlingRights = [...blackCastlingRights];
+    //         }
 
-            let tempData = {...data};
-            let material = JSON.parse(JSON.stringify(props.material));
-            let moveHistory = [...props.moveHistory];
+    //         let tempData = {...data};
+    //         let material = JSON.parse(JSON.stringify(props.material));
+    //         let moveHistory = [...props.moveHistory];
 
-            const calculateNetMaterial = (mat) => {
-                let whiteMaterial = mat.white["p"] + mat.white["n"]*3 + mat.white["b"]*3 + mat.white["r"]*5 + mat.white["q"]*9;
-                let blackMaterial = mat.black["p"] + mat.black["n"]*3 + mat.black["b"]*3 + mat.black["r"]*5 + mat.black["q"]*9;
+    //         const calculateNetMaterial = (mat) => {
+    //             let whiteMaterial = mat.white["p"] + mat.white["n"]*3 + mat.white["b"]*3 + mat.white["r"]*5 + mat.white["q"]*9;
+    //             let blackMaterial = mat.black["p"] + mat.black["n"]*3 + mat.black["b"]*3 + mat.black["r"]*5 + mat.black["q"]*9;
 
-                return whiteMaterial - blackMaterial;
-            }
+    //             return whiteMaterial - blackMaterial;
+    //         }
 
-            // console.log(AiPieces);
-            let possibleMoves = []
-            for(let pieceType in AiPieces){
-                for(let currPieceLoc in AiPieces[pieceType]){
-                    for(let dest of AiPieces[pieceType][currPieceLoc]){
-                        possibleMoves.push({pieceType: pieceType, initialPos: currPieceLoc, destination: dest});
-                    }
-                }
-            }
+    //         // console.log(AiPieces);
+    //         let possibleMoves = []
+    //         for(let pieceType in AiPieces){
+    //             for(let currPieceLoc in AiPieces[pieceType]){
+    //                 for(let dest of AiPieces[pieceType][currPieceLoc]){
+    //                     possibleMoves.push({pieceType: pieceType, initialPos: currPieceLoc, destination: dest});
+    //                 }
+    //             }
+    //         }
 
-            if(possibleMoves.length > 0){
-                let index = Math.floor(Math.random() * possibleMoves.length);
-                let randomMove = possibleMoves[index];
+    //         if(possibleMoves.length > 0){
+    //             let index = Math.floor(Math.random() * possibleMoves.length);
+    //             let randomMove = possibleMoves[index];
 
-                // call once to select the piece
-                //onClick([data[randomMove.initialPos], AI_PLAYER, setPlayer, randomMove.initialPos, currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial, move, capture, props.gamemode]);
-                let newSquareTypes = {...currentSquareTypes};
+    //             // call once to select the piece
+    //             //onClick([data[randomMove.initialPos], AI_PLAYER, setPlayer, randomMove.initialPos, currentSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial, move, capture, props.gamemode]);
+    //             let newSquareTypes = {...currentSquareTypes};
 
-                pieceSelected = data[randomMove.initialPos];
-                selectedPieceLoc = randomMove.initialPos;
+    //             pieceSelected = data[randomMove.initialPos];
+    //             selectedPieceLoc = randomMove.initialPos;
 
                 
-                newSquareTypes[randomMove.initialPos] += "-highlighted";
+    //             newSquareTypes[randomMove.initialPos] += "-highlighted";
 
-                // call again to move the piece
-                onClick([data[randomMove.destination], AI_PLAYER, setPlayer, randomMove.destination, newSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial, move, capture, props.gamemode]);
-            }           
+    //             onClick([data[randomMove.destination], AI_PLAYER, setPlayer, randomMove.destination, newSquareTypes, setSquareTypes, data, setData, props.promotion, props.setPromotion, props.setPromotionColour, props.moveHistory, props.setMoveHistory, props.material, props.setMaterial, move, capture, props.gamemode]);
+    //         }           
 
-            // build decision tree
-            // let tree = {eval: 0, children: [], data: tempData, moveHistory: moveHistory, AiPieces: AiPieces, humanPieces: humanPieces, AiCastlingRights: AiCastlingRights, humanCastlingRights: humanCastlingRights, material: material};
 
-            // const buildTree = (tree, data, moveHistory, myPieces, theirPieces, myColour, myCastlingRights, theirCastlingRights, material, currentDepth) => {
-            //     let theirColour = (myColour == "white") ? "black" : "white";
-                
-            //     for(let pieceType in myPieces){
-            //         for(let pieceLoc in myPieces[pieceType]){
-            //             for(let destination of myPieces[pieceType][pieceLoc]){
-                            
-            //                 let newMoveHistory = [...moveHistory];
-            //                 let newMaterial = JSON.parse(JSON.stringify(material));
-            //                 let newData = JSON.parse(JSON.stringify(data));
-            //                 let myNewPieces = JSON.parse(JSON.stringify(myPieces));
-            //                 let theirNewPieces = JSON.parse(JSON.stringify(theirPieces));
-            //                 let myNewCastlingRights = [...myCastlingRights];
-            //                 let theirNewCastlingRights = [...theirCastlingRights];
-            //                 let newAiCastlingRights = (myColour == AI_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
-            //                 let newHumanCastlingRights = (myColour == HUMAN_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
-            //                 if(pieceType == "king") {
-            //                     myNewCastlingRights = [false, false];
-            //                 }
-            //                 if(destination == "O-O"){
-            //                     if(myColour == "white"){
-                                    
-            //                         newData["e1"] = "";
-            //                         newData["h1"] = "";
-            //                         newData["g1"] = "wk";
-            //                         newData["f1"] = "wr";
-    
-            //                         delete myNewPieces.king["e1"];
-            //                         myNewPieces.king["g1"] = [];
-    
-            //                         delete myNewPieces.rooks["h1"];
-            //                         myNewPieces.rooks["f1"] = [];
-    
-            //                         newMoveHistory.push({initialPos: "e1", destination: "g1", piece: "wk", name: "O-O"});
-    
-            //                         myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                         theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                         newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                     }
-            //                     else {
-            //                         newData["e8"] = "";
-            //                         newData["h8"] = "";
-            //                         newData["g8"] = "bk";
-            //                         newData["f8"] = "br";
-    
-            //                         delete myNewPieces.king["e8"];
-            //                         myNewPieces.king["g8"] = [];
-    
-            //                         delete myNewPieces.rooks["h8"];
-            //                         myNewPieces.rooks["f8"] = [];
-    
-            //                         newMoveHistory.push({initialPos: "e8", destination: "g8", piece: "bk", name: "O-O"});
-                                
-            //                         myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                         theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                         newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                     }
-                                
-            //                 }
-            //                 else if(destination == "O-O-O"){
-            //                     if(myColour == "white"){
-                                    
-            //                         newData["e1"] = "";
-            //                         newData["a1"] = "";
-            //                         newData["c1"] = "wk";
-            //                         newData["d1"] = "wr";
-    
-            //                         delete myNewPieces.king["e1"];
-            //                         myNewPieces.king["c1"] = [];
-    
-            //                         delete myNewPieces.rooks["a1"];
-            //                         myNewPieces.rooks["d1"] = [];
-    
-            //                         newMoveHistory.push({initialPos: "e1", destination: "c1", piece: "wk", name: "O-O-O"});
-                                
-            //                         myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                         theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                         newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                     }
-            //                     else {
-            //                         newData["e8"] = "";
-            //                         newData["a8"] = "";
-            //                         newData["c8"] = "bk";
-            //                         newData["d8"] = "br";
-    
-            //                         delete myNewPieces.king["e8"];
-            //                         myNewPieces.king["c8"] = [];
-    
-            //                         delete myNewPieces.rooks["a8"];
-            //                         myNewPieces.rooks["d8"] = [];
-    
-            //                         newMoveHistory.push({initialPos: "e8", destination: "c8", piece: "bk", name: "O-O-O"});
-                                
-            //                         myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                         theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                         newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                     }
-            //                 }
-            //                 else if(destination == "<-x"){
-            //                     let direction = 1;
-            //                     if(myColour == "black"){
-            //                         direction = -1;
-            //                     }
-            //                     let myNewPawnLoc = prevChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
-            //                     let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
-    
-            //                     newData[pieceLoc] = "";
-            //                     newData[myNewPawnLoc] = myColour.charAt(0) + "p";
-    
-            //                     newData[theirPawnLoc] = "";
-    
-            //                     delete myNewPieces.pawns[pieceLoc];
-            //                     myNewPieces.pawns[myNewPawnLoc] = [];
-    
-            //                     delete theirNewPieces.pawns[theirPawnLoc];
-    
-            //                     newMaterial[myColour]["p"]++;
-    
-            //                     newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
-                            
-            //                     myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                     theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                     newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                 }
-            //                 else if(destination == "x->"){
-            //                     let direction = 1;
-            //                     if(myColour == "black"){
-            //                         direction = -1;
-            //                     }
-            //                     let myNewPawnLoc = nextChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
-            //                     let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
-    
-            //                     newData[pieceLoc] = "";
-            //                     newData[myNewPawnLoc] = myColour.charAt(0) + "p";
-    
-            //                     newData[theirPawnLoc] = "";
-    
-            //                     delete myNewPieces.pawns[pieceLoc];
-            //                     myNewPieces.pawns[myNewPawnLoc] = [];
-    
-            //                     delete theirNewPieces.pawns[theirPawnLoc];
-    
-            //                     newMaterial[myColour]["p"]++;
-    
-            //                     newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
-                            
-            //                     myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                     theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                     newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                 }
-            //                 else if(data[destination] == ""){
-            //                     newData[pieceLoc] = "";
-            //                     delete myNewPieces[pieceType][pieceLoc];
-    
-            //                     if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
-            //                         let newMoveHistory2 = [...newMoveHistory];
-            //                         let newMaterial2 = {...newMaterial};
-            //                         let newData2 = {...newData};
-            //                         let myNewPieces2 = {...myNewPieces};
-            //                         let theirNewPieces2 = {...theirNewPieces};
-
-            //                         let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
-            //                         let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
-    
-            //                         newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-            //                         newMaterial2[myColour]["q"]++;
-            //                         newData2[destination] = myColour.charAt(0) + "q";
-            //                         myNewPieces2["queens"][destination] = [];
-            //                         myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-            //                         theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-            //                         newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
-
-            //                         let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-            //                         if(currentDepth < MAX_DEPTH){
-            //                             buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-            //                         }
-            //                         tree.children.push(subtree);
-                                    
-            //                         newMoveHistory2 = [...newMoveHistory];
-            //                         newMaterial2 = {...newMaterial};
-            //                         newData2 = {...newData};
-            //                         myNewPieces2 = {...myNewPieces};
-            //                         theirNewPieces2 = {...theirNewPieces};
-    
-            //                         newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-            //                         newMaterial2[myColour]["n"]++;
-            //                         newData2[destination] = myColour.charAt(0) + "n";
-            //                         myNewPieces2["knights"][destination] = [];
-            //                         myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-            //                         theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-            //                         newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
-                                    
-            //                         subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-            //                         if(currentDepth < MAX_DEPTH){
-            //                             buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-            //                         }
-            //                         tree.children.push(subtree);
-            //                         continue;
-            //                     }
-    
-            //                     else {
-            //                         newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
-            //                         myNewPieces[pieceType][destination] = [];
-    
-            //                         newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-    
-            //                         myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                         theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                         newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                     }
-            //                 }
-            //                 else {
-    
-            //                     newMaterial[myColour][data[destination].charAt(1)]++;
-            //                     newData[pieceLoc] = "";
-    
-            //                     if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
-            //                         let newMoveHistory2 = [...newMoveHistory];
-            //                         let newMaterial2 = {...newMaterial};
-            //                         let newData2 = JSON.parse(JSON.stringify(newData));
-            //                         let myNewPieces2 = {...myNewPieces};
-            //                         let theirNewPieces2 = {...theirNewPieces};
-
-            //                         let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
-            //                         let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
-    
-            //                         newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-            //                         newMaterial2[myColour]["q"]++;
-            //                         newData2[destination] = myColour.charAt(0) + "q";
-            //                         myNewPieces2["queens"][destination] = [];
-            //                         delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
-            //                         myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-            //                         theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-            //                         newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
-
-            //                         let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-            //                         if(currentDepth < MAX_DEPTH){
-            //                             buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-            //                         }
-            //                         tree.children.push(subtree);
-                                    
-            //                         newMoveHistory2 = [...newMoveHistory];
-            //                         newMaterial2 = {...newMaterial};
-            //                         newData2 = {...newData};
-            //                         myNewPieces2 = {...myNewPieces};
-            //                         theirNewPieces2 = {...theirNewPieces};
-    
-            //                         newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-            //                         newMaterial2[myColour]["n"]++;
-            //                         newData2[destination] = myColour.charAt(0) + "n";
-            //                         myNewPieces2["knights"][destination] = [];
-            //                         delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
-            //                         myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-            //                         theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-            //                         newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
-
-            //                         subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-            //                         if(currentDepth < MAX_DEPTH){
-            //                             buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-            //                         }
-            //                         tree.children.push(subtree);
-            //                         continue;
-            //                     }
-            //                     else {
-            //                         myNewPieces[pieceType][destination] = [];
-    
-            //                         delete theirNewPieces[getPieceTypeByLetter(data[destination].charAt(1))][destination];
-    
-            //                         newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
-    
-            //                         newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-    
-            //                         myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-            //                         theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-    
-            //                         newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-            //                     }
-            //                 }
-                            
-            //                 let AiPieces = (myColour == AI_PLAYER) ? myNewPieces : theirNewPieces;
-            //                 let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces : theirNewPieces;
-
-            //                 let subtree = {eval: 0, children: [], data: newData, moveHistory: newMoveHistory, AiPieces: AiPieces, humanPieces: humanPieces, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: newMaterial};
-            //                 if(currentDepth < MAX_DEPTH){
-            //                     buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-            //                 }
-            //                 tree.children.push(subtree);
-                            
-            //             }
-            //         }
-            //     }
-            // }
-            
-            //buildTree(tree, tempData, moveHistory, AiPieces, humanPieces, AI_PLAYER, AiCastlingRights, humanCastlingRights, material, 0);
-            //buildTree(tree, tempData, moveHistory, humanPieces, AiPieces, HUMAN_PLAYER, humanCastlingRights, AiCastlingRights, material, 0);
-
-            
-            //console.log(tree);
-            //console.log(calculateNetMaterial(material));
-
-        }
-    }, [props.gamemode, player]);
+    //     }
+    // }, [props.gamemode, player]);
 
 
     
