@@ -3,9 +3,12 @@ A chess web app made with React and includes an AI I designed myself
 
 Not mobile friendly
 
-Check it out here: https://raiyaanrahman1.github.io/AI-Plays-Chess/
+Check out the deployed version here: https://raiyaanrahman1.github.io/AI-Plays-Chess/
 
-## Current version: 0.7 - Dummy AI
+### Development Build (almost finished - AI implemented)
+The express backend with the full AI is finished, I just need to iron out a few bugs, hook up a database (have been using file system so far) and deploy it. You can check out the backend I setup in the backend folder (path: game/backend)
+
+## Production version: 0.7 - Dummy AI
 By default, the gamemode is set to AI mode. This is a dumb AI, that simply makes a random legal move. The AI will still try to avoid checkmate, since if it's in check, it the only legal moves are to move the king, capture the piece putting it in check, or block the check.
 
 Click the button labeled "Self-play" to make moves for both players. You can use this mode to play with yourself to practice, or take turns with a friend (on the same computer).
