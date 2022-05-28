@@ -11,7 +11,7 @@ let targetPiece = "";
 // short, long castling rights
 let whiteCastlingRights = [true, true];
 let blackCastlingRights = [true, true];
-let HUMAN_PLAYER = "white", AI_PLAYER = "black", MAX_DEPTH = 2;
+let HUMAN_PLAYER = "white", AI_PLAYER = "black", MAX_DEPTH = 5;
 
 function nextChar(c) {
     return String.fromCharCode(c.charCodeAt(0) + 1);
@@ -1833,21 +1833,6 @@ const Board = (props) => {
     useEffect(() => {
         if(true){ // props.gamemode == "AI" && player == AI_PLAYER
 
-            fetch('http://localhost:3001/api', {
-                method: "POST",
-                headers: {
-                    'content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    hello: "Joey"
-                })
-                
-            }).then(res => {
-                if(res.ok) console.log("Success");
-                else console.log("Failure");
-            }).catch(err => console.log(err));
-            
-
             let humanPieces, AiPieces, AiCastlingRights, humanCastlingRights;
             if(AI_PLAYER == "white"){
                 humanPieces = JSON.parse(JSON.stringify(blackPieces));
@@ -2177,8 +2162,22 @@ const Board = (props) => {
             }
             
             //buildTree(tree, tempData, moveHistory, AiPieces, humanPieces, AI_PLAYER, AiCastlingRights, humanCastlingRights, material, 0);
-            //buildTree(tree, tempData, moveHistory, humanPieces, AiPieces, HUMAN_PLAYER, humanCastlingRights, AiCastlingRights, material, 0);
+            buildTree(tree, tempData, moveHistory, humanPieces, AiPieces, HUMAN_PLAYER, humanCastlingRights, AiCastlingRights, material, 0);
 
+            let str = JSON.stringify(tree);
+            //console.log("ok");
+            fetch('http://localhost:3001/api', {
+                method: "POST",
+                headers: {
+                    'content-type': "text/plain"
+                },
+                body: str
+                
+            }).then(res => {
+                return res;
+            }).then(
+                data => console.log(data)
+            ).catch(err => console.log(err));
             
             //console.log(tree);
             //console.log(calculateNetMaterial(material));
