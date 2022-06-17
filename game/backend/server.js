@@ -9,6 +9,22 @@ require('dotenv').config();
 app.use(express.json());
 app.use(cors());
 
+const { mongoose } = require('./db/mongoose');
+mongoose.set('bufferCommands', false);  // don't buffer db requests if the db server isn't connected - minimizes http requests hanging if this is the case.
+
+const { Position } = require('./models/position');
+
+// to validate object IDs
+const { ObjectID } = require('mongodb');
+
+// body-parser: middleware for parsing HTTP JSON body into a usable object
+const bodyParser = require('body-parser');
+app.use(bodyParser.json());
+
+/*** Helper functions below **********************************/
+function isMongoError(error) { // checks for first error returned by promise rejection if Mongo database suddently disconnects
+	return typeof error === 'object' && error !== null && error.name === "MongoNetworkError";
+}
 
 app.get('/api/', (req, res) => {
     // res.json({
@@ -17,7 +33,7 @@ app.get('/api/', (req, res) => {
     let evals = [];
     let dict = {};
     if(currentTree.children.length <= 0){
-        currentTree.MAX_DEPTH = currentTree.depth + 4;
+        currentTree.MAX_DEPTH = currentTree.depth + MAX_DEPTH;
         buildTree(currentTree);
     }
     for(let subtree of currentTree.children){
@@ -34,13 +50,14 @@ app.get('/api/', (req, res) => {
     if(currentTree.myColour === "black"){
         evals.reverse();
     }
+    console.log(evals);
     currentTree = dict[evals.pop()].pop();
     res.json({...currentTree});
 
 });
 
 function getBranchEval(tree){
-    if(tree.children.length <= 0) return tree.eval;
+    if(tree.children.length <= 0) return evaluate(tree);
     let evals = [];
     for(let subtree of tree.children){
         evals.push(getBranchEval(subtree));
@@ -121,7 +138,7 @@ app.listen(PORT, () => {
 
 // const {fork} = require("child_process");
 // const fs = require('fs');
-let MAX_DEPTH = 4, AI_PLAYER = "black", HUMAN_PLAYER = "white", whiteCastlingRights = [true, true], blackCastlingRights = [true, true];
+let MAX_DEPTH = 2, AI_PLAYER = "black", HUMAN_PLAYER = "white", whiteCastlingRights = [true, true], blackCastlingRights = [true, true];
 
 function nextChar(c) {
     return String.fromCharCode(c.charCodeAt(0) + 1);
@@ -1403,354 +1420,209 @@ const buildTree = (tree) => {
     let theirPieces = tree.theirPieces;
     let currentDepth = tree.depth;
 
+    tree.myPieces = calculateLegalMoves(tree.myPieces, tree.theirPieces, myColour, tree.data, tree.moveHistory);
+    tree.theirPieces = calculateLegalMoves(tree.theirPieces, tree.myPieces, myColour, tree.data, tree.moveHistory);
 
-    
-    
 
+    let legalMoves = [];
     for(let pieceType in tree.myPieces){
         for(let pieceLoc in tree.myPieces[pieceType]){
             for(let destination of tree.myPieces[pieceType][pieceLoc]){
+                legalMoves.push({pieceType: pieceType, pieceLoc: pieceLoc, destination: destination});
+            }
+        }
+    }
+    // let numMovesConsidered = Math.max(5, Math.round(2*Math.log(legalMoves.length)));
+    // let movesConsidered = [];
+    // for(let i = 0; i < numMovesConsidered; i++){
+    //     movesConsidered.push(legalMoves[Math.floor(Math.random()*legalMoves.length)]);
+    // }
+
+    
+
+    for(let move of legalMoves){
+        let pieceType = move.pieceType;
+        let pieceLoc = move.pieceLoc;
+        let destination = move.destination;
                 
-                let newMoveHistory = [...tree.moveHistory];
-                let newMaterial = JSON.parse(JSON.stringify(tree.material));
-                let newData = JSON.parse(JSON.stringify(tree.data));
-                let myNewPieces = JSON.parse(JSON.stringify(tree.myPieces));
-                let theirNewPieces = JSON.parse(JSON.stringify(tree.theirPieces));
-                let myNewCastlingRights = [...myCastlingRights];
-                let theirNewCastlingRights = [...theirCastlingRights];
-                let newAiCastlingRights = (tree.myColour == AI_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
-                let newHumanCastlingRights = (tree.myColour == HUMAN_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
-                if(pieceType == "king") {
-                    myNewCastlingRights = [false, false];
-                }
-                if(destination == "O-O"){
-                    if(myColour == "white"){
-                        
-                        newData["e1"] = "";
-                        newData["h1"] = "";
-                        newData["g1"] = "wk";
-                        newData["f1"] = "wr";
-
-                        delete myNewPieces.king["e1"];
-                        myNewPieces.king["g1"] = [];
-
-                        delete myNewPieces.rooks["h1"];
-                        myNewPieces.rooks["f1"] = [];
-
-                        newMoveHistory.push({initialPos: "e1", destination: "g1", piece: "wk", name: "O-O"});
-
-                        myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                        theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-
-                        newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                    }
-                    else {
-                        newData["e8"] = "";
-                        newData["h8"] = "";
-                        newData["g8"] = "bk";
-                        newData["f8"] = "br";
-
-                        delete myNewPieces.king["e8"];
-                        myNewPieces.king["g8"] = [];
-
-                        delete myNewPieces.rooks["h8"];
-                        myNewPieces.rooks["f8"] = [];
-
-                        newMoveHistory.push({initialPos: "e8", destination: "g8", piece: "bk", name: "O-O"});
-                    
-                        myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                        theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-
-                        newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                    }
-                    
-                }
-                else if(destination == "O-O-O"){
-                    if(myColour == "white"){
-                        
-                        newData["e1"] = "";
-                        newData["a1"] = "";
-                        newData["c1"] = "wk";
-                        newData["d1"] = "wr";
-
-                        delete myNewPieces.king["e1"];
-                        myNewPieces.king["c1"] = [];
-
-                        delete myNewPieces.rooks["a1"];
-                        myNewPieces.rooks["d1"] = [];
-
-                        newMoveHistory.push({initialPos: "e1", destination: "c1", piece: "wk", name: "O-O-O"});
-                    
-                        myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                        theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-
-                        newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                    }
-                    else {
-                        newData["e8"] = "";
-                        newData["a8"] = "";
-                        newData["c8"] = "bk";
-                        newData["d8"] = "br";
-
-                        delete myNewPieces.king["e8"];
-                        myNewPieces.king["c8"] = [];
-
-                        delete myNewPieces.rooks["a8"];
-                        myNewPieces.rooks["d8"] = [];
-
-                        newMoveHistory.push({initialPos: "e8", destination: "c8", piece: "bk", name: "O-O-O"});
-                    
-                        myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                        theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-
-                        newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                    }
-                }
-                else if(destination == "<-x"){
-                    let direction = 1;
-                    if(myColour == "black"){
-                        direction = -1;
-                    }
-                    let myNewPawnLoc = prevChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
-                    let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
-
-                    newData[pieceLoc] = "";
-                    newData[myNewPawnLoc] = myColour.charAt(0) + "p";
-
-                    newData[theirPawnLoc] = "";
-
-                    delete myNewPieces.pawns[pieceLoc];
-                    myNewPieces.pawns[myNewPawnLoc] = [];
-
-                    delete theirNewPieces.pawns[theirPawnLoc];
-
-                    newMaterial[myColour]["p"]++;
-
-                    
-
-                    newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
-
-                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-
-                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                }
-                else if(destination == "x->"){
-                    let direction = 1;
-                    if(myColour == "black"){
-                        direction = -1;
-                    }
-                    let myNewPawnLoc = nextChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
-                    let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
-
-                    newData[pieceLoc] = "";
-                    newData[myNewPawnLoc] = myColour.charAt(0) + "p";
-
-                    newData[theirPawnLoc] = "";
-
-                    delete myNewPieces.pawns[pieceLoc];
-                    myNewPieces.pawns[myNewPawnLoc] = [];
-
-                    delete theirNewPieces.pawns[theirPawnLoc];
-
-                    newMaterial[myColour]["p"]++;
-                    
-                    
-                    newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
+        let newMoveHistory = [...tree.moveHistory];
+        let newMaterial = JSON.parse(JSON.stringify(tree.material));
+        let newData = JSON.parse(JSON.stringify(tree.data));
+        let myNewPieces = JSON.parse(JSON.stringify(tree.myPieces));
+        let theirNewPieces = JSON.parse(JSON.stringify(tree.theirPieces));
+        let myNewCastlingRights = [...myCastlingRights];
+        let theirNewCastlingRights = [...theirCastlingRights];
+        let newAiCastlingRights = (tree.myColour == AI_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
+        let newHumanCastlingRights = (tree.myColour == HUMAN_PLAYER) ? myNewCastlingRights : theirNewCastlingRights;
+        if(pieceType == "king") {
+            myNewCastlingRights = [false, false];
+        }
+        if(destination == "O-O"){
+            if(myColour == "white"){
                 
-                    myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                    theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+                newData["e1"] = "";
+                newData["h1"] = "";
+                newData["g1"] = "wk";
+                newData["f1"] = "wr";
 
-                    newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                }
-                else if(data[destination] == ""){
-                    newData[pieceLoc] = "";
-                    delete myNewPieces[pieceType][pieceLoc];
+                delete myNewPieces.king["e1"];
+                myNewPieces.king["g1"] = [];
 
-                    if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
-                        let newMoveHistory2 = [...newMoveHistory];
-                        let newMaterial2 = {...newMaterial};
-                        let newData2 = {...newData};
-                        let myNewPieces2 = {...myNewPieces};
-                        let theirNewPieces2 = {...theirNewPieces};
+                delete myNewPieces.rooks["h1"];
+                myNewPieces.rooks["f1"] = [];
 
-                        let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
-                        let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
+                newMoveHistory.push({initialPos: "e1", destination: "g1", piece: "wk", name: "O-O"});
 
+                // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
 
-                        
-                        newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-                        newMaterial2[myColour]["q"]++;
-                        newData2[destination] = myColour.charAt(0) + "q";
-                        myNewPieces2["queens"][destination] = [];
-                        myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-                        theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-                        newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
+                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+            }
+            else {
+                newData["e8"] = "";
+                newData["h8"] = "";
+                newData["g8"] = "bk";
+                newData["f8"] = "br";
 
-                        // let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-                        let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
-                        newTrees.push(subtree);
-                        // tree.children.push(subtree);
+                delete myNewPieces.king["e8"];
+                myNewPieces.king["g8"] = [];
 
-                        // if(tree.currentDepth < MAX_DEPTH){
-                        //     const childProcess = fork('./buildTree.js');
-                        //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
-                        //     childProcess.on("message", childTree => tree.children.push(childTree));
-                        //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-                        // }
-                        // else {
-                        //     tree.children.push(subtree);
-                        // }
-                        
-                        
-                        newMoveHistory2 = [...newMoveHistory];
-                        newMaterial2 = {...newMaterial};
-                        newData2 = {...newData};
-                        myNewPieces2 = {...myNewPieces};
-                        theirNewPieces2 = {...theirNewPieces};
+                delete myNewPieces.rooks["h8"];
+                myNewPieces.rooks["f8"] = [];
 
+                newMoveHistory.push({initialPos: "e8", destination: "g8", piece: "bk", name: "O-O"});
+            
+                // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
 
-                        newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-                        newMaterial2[myColour]["n"]++;
-                        newData2[destination] = myColour.charAt(0) + "n";
-                        myNewPieces2["knights"][destination] = [];
-                        myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-                        theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-                        newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
-                        
-                        // subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-                        subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
-                        newTrees.push(subtree);
-                        // tree.children.push(subtree);
-
-                        // if(tree.currentDepth < MAX_DEPTH){
-                        //     const childProcess = fork('./buildTree.js');
-                        //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
-                        //     childProcess.on("message", childTree => tree.children.push(childTree));
-                        //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-                        // }
-                        // else {
-                        //     tree.children.push(subtree);
-                        // }
-                        
-                        continue;
-                    }
-
-                    else {
-                        newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
-                        myNewPieces[pieceType][destination] = [];
-
-                        
-                        newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-
-                        myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                        theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-
-                        newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                    }
-                }
-                else {
-                    
-                    newMaterial[myColour][data[destination].charAt(1)]+=1;
-                    newData[pieceLoc] = "";
-
-                    if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
-                        let newMoveHistory2 = [...newMoveHistory];
-                        let newMaterial2 = {...newMaterial};
-                        let newData2 = JSON.parse(JSON.stringify(newData));
-                        let myNewPieces2 = {...myNewPieces};
-                        let theirNewPieces2 = {...theirNewPieces};
-
-                        let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
-                        let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
-
-                        
-                        
-                        newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-                        newMaterial2[myColour]["q"]++;
-                        newData2[destination] = myColour.charAt(0) + "q";
-                        myNewPieces2["queens"][destination] = [];
-                        delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
-                        myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-                        theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-                        newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
-
-                        // let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-                        let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
-                        newTrees.push(subtree);
-                        // tree.children.push(subtree);
-
-                        // if(tree.currentDepth < MAX_DEPTH){
-                        //     const childProcess = fork('./buildTree.js');
-                        //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
-                        //     childProcess.on("message", childTree => tree.children.push(childTree));
-                        //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-                        // }
-                        // else {
-                        //     tree.children.push(subtree);
-                        // }
-                        
-                        
-                        newMoveHistory2 = [...newMoveHistory];
-                        newMaterial2 = {...newMaterial};
-                        newData2 = {...newData};
-                        myNewPieces2 = {...myNewPieces};
-                        theirNewPieces2 = {...theirNewPieces};
-
-
-                        
-                        newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-                        newMaterial2[myColour]["n"]++;
-                        newData2[destination] = myColour.charAt(0) + "n";
-                        myNewPieces2["knights"][destination] = [];
-                        delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
-                        myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
-                        theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
-                        newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
-
-                        // subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
-                        subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
-                        newTrees.push(subtree);
-                        // tree.children.push(subtree);
-
-                        // if(currentDepth < MAX_DEPTH){
-                        //     const childProcess = fork('./buildTree.js');
-                        //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
-                        //     childProcess.on("message", childTree => tree.children.push(childTree));
-                        //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
-                        // }
-                        // else {
-                        //     tree.children.push(subtree);
-                        // }
-                        
-                        continue;
-                    }
-                    else {
-                        myNewPieces[pieceType][destination] = [];
-                        delete myNewPieces[pieceType][pieceLoc];
-
-                        delete theirNewPieces[getPieceTypeByLetter(data[destination].charAt(1))][destination];
-                        
-                        newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
-
-
-                        
-                        newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
-
-                        
-
-                        myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
-                        theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
-
-                        newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
-                    }
-                }
+                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+            }
+            
+        }
+        else if(destination == "O-O-O"){
+            if(myColour == "white"){
                 
-                let AiPieces = (myColour == AI_PLAYER) ? myNewPieces : theirNewPieces;
-                let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces : theirNewPieces;
+                newData["e1"] = "";
+                newData["a1"] = "";
+                newData["c1"] = "wk";
+                newData["d1"] = "wr";
+
+                delete myNewPieces.king["e1"];
+                myNewPieces.king["c1"] = [];
+
+                delete myNewPieces.rooks["a1"];
+                myNewPieces.rooks["d1"] = [];
+
+                newMoveHistory.push({initialPos: "e1", destination: "c1", piece: "wk", name: "O-O-O"});
+            
+                // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+
+                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+            }
+            else {
+                newData["e8"] = "";
+                newData["a8"] = "";
+                newData["c8"] = "bk";
+                newData["d8"] = "br";
+
+                delete myNewPieces.king["e8"];
+                myNewPieces.king["c8"] = [];
+
+                delete myNewPieces.rooks["a8"];
+                myNewPieces.rooks["d8"] = [];
+
+                newMoveHistory.push({initialPos: "e8", destination: "c8", piece: "bk", name: "O-O-O"});
+            
+                // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+
+                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+            }
+        }
+        else if(destination == "<-x"){
+            let direction = 1;
+            if(myColour == "black"){
+                direction = -1;
+            }
+            let myNewPawnLoc = prevChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
+            let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
+
+            newData[pieceLoc] = "";
+            newData[myNewPawnLoc] = myColour.charAt(0) + "p";
+
+            newData[theirPawnLoc] = "";
+
+            delete myNewPieces.pawns[pieceLoc];
+            myNewPieces.pawns[myNewPawnLoc] = [];
+
+            delete theirNewPieces.pawns[theirPawnLoc];
+
+            newMaterial[myColour]["p"]++;
+
+            
+
+            newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
+
+            // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+            // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+
+            newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+        }
+        else if(destination == "x->"){
+            let direction = 1;
+            if(myColour == "black"){
+                direction = -1;
+            }
+            let myNewPawnLoc = nextChar(pieceLoc.charAt(0)) + (parseInt(pieceLoc.charAt(1)) + direction);
+            let theirPawnLoc = myNewPawnLoc.charAt(0) + (parseInt(myNewPawnLoc.charAt(1) - direction));
+
+            newData[pieceLoc] = "";
+            newData[myNewPawnLoc] = myColour.charAt(0) + "p";
+
+            newData[theirPawnLoc] = "";
+
+            delete myNewPieces.pawns[pieceLoc];
+            myNewPieces.pawns[myNewPawnLoc] = [];
+
+            delete theirNewPieces.pawns[theirPawnLoc];
+
+            newMaterial[myColour]["p"]++;
+            
+            
+            newMoveHistory.push({initialPos: pieceLoc, destination: myNewPawnLoc, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, myNewPawnLoc, myPieces, myColour)});
+        
+            // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+            // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+
+            newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
+        }
+        else if(data[destination] == ""){
+            newData[pieceLoc] = "";
+            delete myNewPieces[pieceType][pieceLoc];
+
+            if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
+                let newMoveHistory2 = [...newMoveHistory];
+                let newMaterial2 = {...newMaterial};
+                let newData2 = {...newData};
+                let myNewPieces2 = {...myNewPieces};
+                let theirNewPieces2 = {...theirNewPieces};
+
+                let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
+                let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
+
 
                 
-                let subtree = {eval: 0, children: [], data: {...newData}, moveHistory: newMoveHistory, myPieces: {...theirNewPieces}, theirPieces: {...myNewPieces}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: newMaterial, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
+                newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                newMaterial2[myColour]["q"]++;
+                newData2[destination] = myColour.charAt(0) + "q";
+                myNewPieces2["queens"][destination] = [];
+                // myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                // theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
+
+                // let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
                 newTrees.push(subtree);
                 // tree.children.push(subtree);
 
@@ -1762,56 +1634,229 @@ const buildTree = (tree) => {
                 // }
                 // else {
                 //     tree.children.push(subtree);
-                // }                
+                // }
+                
+                
+                newMoveHistory2 = [...newMoveHistory];
+                newMaterial2 = {...newMaterial};
+                newData2 = {...newData};
+                myNewPieces2 = {...myNewPieces};
+                theirNewPieces2 = {...theirNewPieces};
+
+
+                newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                newMaterial2[myColour]["n"]++;
+                newData2[destination] = myColour.charAt(0) + "n";
+                myNewPieces2["knights"][destination] = [];
+                // myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                // theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
+                
+                // subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
+                newTrees.push(subtree);
+                // tree.children.push(subtree);
+
+                // if(tree.currentDepth < MAX_DEPTH){
+                //     const childProcess = fork('./buildTree.js');
+                //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
+                //     childProcess.on("message", childTree => tree.children.push(childTree));
+                //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                // }
+                // else {
+                //     tree.children.push(subtree);
+                // }
+                
+                continue;
+            }
+
+            else {
+                newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
+                myNewPieces[pieceType][destination] = [];
+
+                
+                newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+
+                // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+
+                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
             }
         }
-    }
-    // return newTrees;
-    if(tree.depth < tree.MAX_DEPTH && newTrees.length > 0){
+        else {
+            
+            newMaterial[myColour][data[destination].charAt(1)]+=1;
+            newData[pieceLoc] = "";
 
-        let dict = {};
-        let evals = [];
-        for(let subtree of newTrees){
-            subtree.eval = evaluate(subtree);
-            evals.push(subtree.eval);
-            if(dict[subtree.eval] === undefined){
-                dict[subtree.eval] = [subtree];
+            if(myColour == "white" && pieceType == "pawns" && destination.charAt(1) == "8" || (myColour == "black" && pieceType == "pawns" && destination.charAt(1) == "1")){
+                let newMoveHistory2 = [...newMoveHistory];
+                let newMaterial2 = {...newMaterial};
+                let newData2 = JSON.parse(JSON.stringify(newData));
+                let myNewPieces2 = {...myNewPieces};
+                let theirNewPieces2 = {...theirNewPieces};
+
+                let AiPieces = (myColour == AI_PLAYER) ? myNewPieces2 : theirNewPieces2;
+                let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces2 : theirNewPieces2;
+
+                
+                
+                newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                newMaterial2[myColour]["q"]++;
+                newData2[destination] = myColour.charAt(0) + "q";
+                myNewPieces2["queens"][destination] = [];
+                delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
+                // myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                // theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "Q");
+
+                // let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                let subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
+                newTrees.push(subtree);
+                // tree.children.push(subtree);
+
+                // if(tree.currentDepth < MAX_DEPTH){
+                //     const childProcess = fork('./buildTree.js');
+                //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
+                //     childProcess.on("message", childTree => tree.children.push(childTree));
+                //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                // }
+                // else {
+                //     tree.children.push(subtree);
+                // }
+                
+                
+                newMoveHistory2 = [...newMoveHistory];
+                newMaterial2 = {...newMaterial};
+                newData2 = {...newData};
+                myNewPieces2 = {...myNewPieces};
+                theirNewPieces2 = {...theirNewPieces};
+
+
+                
+                newMoveHistory2.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+                newMaterial2[myColour]["n"]++;
+                newData2[destination] = myColour.charAt(0) + "n";
+                myNewPieces2["knights"][destination] = [];
+                delete theirNewPieces2[getPieceTypeByLetter(newData[destination].charAt(1))][destination];
+                // myNewPieces2 = calculateLegalMoves(myNewPieces2, theirNewPieces2, myColour, newData2, newMoveHistory2);
+                // theirNewPieces2 = calculateLegalMoves(theirNewPieces2, myNewPieces2, theirColour, newData2, newMoveHistory2);
+                newMoveHistory2[newMoveHistory2.length-1].name += getMoveSuffix(myNewPieces2, theirNewPieces2, "N");
+
+                // subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}};
+                subtree = {eval: 0, children: [], data: {...newData2}, moveHistory: [...newMoveHistory2], myPieces: {...theirNewPieces2}, theirPieces: {...myNewPieces2}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: {...newMaterial2}, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
+                newTrees.push(subtree);
+                // tree.children.push(subtree);
+
+                // if(currentDepth < MAX_DEPTH){
+                //     const childProcess = fork('./buildTree.js');
+                //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
+                //     childProcess.on("message", childTree => tree.children.push(childTree));
+                //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+                // }
+                // else {
+                //     tree.children.push(subtree);
+                // }
+                
+                continue;
             }
             else {
-                dict[subtree.eval].push(subtree);
+                myNewPieces[pieceType][destination] = [];
+                delete myNewPieces[pieceType][pieceLoc];
+
+                delete theirNewPieces[getPieceTypeByLetter(data[destination].charAt(1))][destination];
+                
+                newData[destination] = myColour.charAt(0) + getLetterByPieceType(pieceType);
+
+
+                
+                newMoveHistory.push({initialPos: pieceLoc, destination: destination, piece: data[pieceLoc], name: generateMoveName(data, pieceLoc, destination, myPieces, myColour)});
+
+                
+
+                // myNewPieces = calculateLegalMoves(myNewPieces, theirNewPieces, myColour, newData, newMoveHistory);
+                // theirNewPieces = calculateLegalMoves(theirNewPieces, myNewPieces, theirColour, newData, newMoveHistory);
+
+                newMoveHistory[newMoveHistory.length-1].name += getMoveSuffix(myNewPieces, theirNewPieces);
             }
         }
-        evals.sort(function(a, b){return a - b});
-        if(tree.myColour === "white"){
-            evals.reverse();
-        }
-        let numLegalMoves = Math.ceil(Math.min(Math.log(newTrees.length) + 5, newTrees.length));
-        let h = -1 * Math.log(1.0/numLegalMoves) / tree.MAX_DEPTH;
-        if(h <= 0){
-            h = 1;
-        }
-        let a = Math.log(numLegalMoves) / h;
-        let numFilteredMoves = Math.ceil(Math.exp(-h*(tree.depth-a)));
-        let numPriorityMoves = Math.ceil(0.5*numFilteredMoves);
-        let numOtherMoves = numFilteredMoves - numPriorityMoves;
+        
+        let AiPieces = (myColour == AI_PLAYER) ? myNewPieces : theirNewPieces;
+        let humanPieces = (myColour == HUMAN_PLAYER) ? myNewPieces : theirNewPieces;
 
-        for(let i = 0; i < numPriorityMoves; i++){
-            tree.children.push(dict[evals[0]].pop());
-            evals.splice(0, 1);
-        }
-        for(let i = 0; i < numOtherMoves; i++){
-            let index = Math.floor(Math.random()*evals.length); // changed for debugging
-            tree.children.push(dict[evals[index]].pop());
-            evals.splice(index, 1);
-        }
+        
+        let subtree = {eval: 0, children: [], data: {...newData}, moveHistory: newMoveHistory, myPieces: {...theirNewPieces}, theirPieces: {...myNewPieces}, myColour: theirColour, AiPieces: {...AiPieces}, humanPieces: {...humanPieces}, AiCastlingRights: newAiCastlingRights, humanCastlingRights: newHumanCastlingRights, material: newMaterial, depth: currentDepth + 1, visited: false, MAX_DEPTH: tree.MAX_DEPTH};
+        newTrees.push(subtree);
+        // tree.children.push(subtree);
 
-        console.log("Completed depth " + tree.depth);
-
+        // if(tree.currentDepth < MAX_DEPTH){
+        //     const childProcess = fork('./buildTree.js');
+        //     childProcess.send({tree: subtree, data: newData, moveHistory: newMoveHistory, myPieces: theirPieces, theirPieces: myPieces, myColour: theirColour, myCastlingRights: theirCastlingRights, theirCastlingRights: myCastlingRights, material: newMaterial, depth: currentDepth + 1});
+        //     childProcess.on("message", childTree => tree.children.push(childTree));
+        //     //buildTree(subtree, newData, newMoveHistory, theirPieces, myPieces, theirColour, theirCastlingRights, myCastlingRights, newMaterial, currentDepth + 1);
+        // }
+        // else {
+        //     tree.children.push(subtree);
+        // }                
     
-        for(let child of tree.children){
+    }
+    // return newTrees;
+
+    if (tree.depth < tree.MAX_DEPTH) {
+        for(let child of newTrees){
+            console.log(tree.depth);
+            console.log(child.MAX_DEPTH);
             buildTree(child);
+            tree.children.push(child);
         }
     }
+
+    // if(tree.depth < tree.MAX_DEPTH && newTrees.length > 0){
+
+    //     let dict = {};
+    //     let evals = [];
+    //     for(let subtree of newTrees){
+    //         subtree.eval = evaluate(subtree);
+    //         evals.push(subtree.eval);
+    //         if(dict[subtree.eval] === undefined){
+    //             dict[subtree.eval] = [subtree];
+    //         }
+    //         else {
+    //             dict[subtree.eval].push(subtree);
+    //         }
+    //     }
+    //     evals.sort(function(a, b){return a - b});
+    //     if(tree.myColour === "white"){
+    //         evals.reverse();
+    //     }
+    //     // let numLegalMoves = Math.ceil(Math.min(Math.log(newTrees.length) + 5, newTrees.length));
+    //     // let h = -1 * Math.log(1.0/numLegalMoves) / tree.MAX_DEPTH;
+    //     // if(h <= 0){
+    //     //     h = 1;
+    //     // }
+    //     // let a = Math.log(numLegalMoves) / h;
+    //     let numFilteredMoves = Math.round(Math.log(newTrees.length));
+    //     let numPriorityMoves = Math.ceil(0.5*numFilteredMoves);
+    //     let numOtherMoves = numFilteredMoves - numPriorityMoves;
+
+    //     console.log(numFilteredMoves)
+
+    //     for(let i = 0; i < numPriorityMoves; i++){
+    //         tree.children.push(dict[evals[0]].pop());
+    //         evals.splice(0, 1);
+    //     }
+    //     for(let i = 0; i < numOtherMoves; i++){
+    //         let index = Math.floor(Math.random()*evals.length);
+    //         tree.children.push(dict[evals[index]].pop());
+    //         evals.splice(index, 1);
+    //     }
+
+    //     // console.log("Completed depth " + tree.depth);
+
+    
+    //     for(let child of tree.children){
+    //         buildTree(child);
+    //     }
+    // }
     
 }
 
@@ -1871,6 +1916,18 @@ fs.readFile("./backend/tree_depth10.json", 'utf8', (err, data) => {
             tree = JSON.parse(data);
             currentTree = tree;
             console.log("Read the tree from file");
+
+            // const saveTree = (tree) => {
+            //     const position = new Position({eval: tree.eval, depth: tree.depth, data: tree.data, moveHistory: tree.moveHistory, myPieces: tree.myPieces, theirPieces: tree.theirPieces, myColour: tree.myColour, AiPieces: tree.AiPieces, humanPieces: tree.humanPieces, AiCastlingRights: tree.AiCastlingRights, humanCastlingRights: tree.humanCastlingRights, material: tree.material});
+            //     position.save();
+            //     for(let subtree of tree.children){
+            //         saveTree(subtree);
+            //     }
+            // }
+
+            // saveTree(tree);
+            
+            
         }
         catch (err) {
             console.log("Error parsing JSON", err);
